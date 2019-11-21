@@ -77,15 +77,13 @@ class SentdeBot(sc2.BotAI):
                      ROBOTICSFACILITY: [5, (215, 155, 0)],
 
                      VOIDRAY: [3, (255, 100, 0)],
-                     #OBSERVER: [3, (255, 255, 255)],
+                     # OBSERVER: [3, (255, 255, 255)],
                     }
 
         for unit_type in draw_dict:
             for unit in self.units(unit_type).ready:
                 pos = unit.position
                 cv2.circle(game_data, (int(pos[0]), int(pos[1])), draw_dict[unit_type][0], draw_dict[unit_type][1], -1)
-
-
 
         main_base_names = ["nexus", "supplydepot", "hatchery"]
         for enemy_building in self.known_enemy_structures:
