@@ -269,6 +269,7 @@ def main():
                 stateFox_next = get_stateFox(unit.pos.x, unit.pos.y)
                 stateFoxint = int(stateFox[agent_id])
 
+                # todo: ask what is it
                 Q_table[stateFoxint, action] = Q_table[stateFoxint, action] + alpha * \
                                                (reward + gamma * np.max(Q_table[stateFox_next, :]) - Q_table[
                                                    stateFoxint, action])
