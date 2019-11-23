@@ -8,11 +8,12 @@ from source import individuals
 
 
 class BaseSCEvaluator(abc.ABC):
-    def __init__(self, environment: sm_env.StarCraft2Env):
+    def __init__(self, environment: sm_env.StarCraft2Env, epsilon: float = 0.7):
         self.env = environment
         env_info = self.env.get_env_info()
         self.n_actions = env_info["n_actions"]
         self.n_agents = env_info["n_agents"]
+        self.epsilon = epsilon
 
     @abc.abstractmethod
     def evaluate(self, individual: individuals.BaseInd) -> Any:
@@ -31,14 +32,17 @@ class SCAbsPosEvaluator(BaseSCEvaluator):
             # get actions for all agents
             for agent_id in range(self.n_agents):
                 agent_info = self.env.get_unit_by_id(agent_id)
-                agents_states[agent_id] = self._get_state_fox(agent_info.pos.x, agent_info.pos.y)
+                agents_states[agent_id] = self._get_state_fox(agent_info.pos.x,
+                                                              agent_info.pos.y)
                 avail_actions = self.env.get_avail_agent_actions(agent_id)
                 # avail_actions = [0, 1, 1, 1, 1, 1, 0, 0, 0]
                 avail_actions_ind = np.nonzero(avail_actions)[0]
                 avail_actions_indices[agent_id] = avail_actions_ind
                 # avail_actions_ind = [1, 2, 3, 4, 5]
 
-            actions = individual.get_actions(agents_states, avail_actions_indices)
+            actions = individual.get_actions(agents_states,
+                                             avail_actions_indices,
+                                             self.epsilon)
 
             reward, terminated, _ = self.env.step(actions)
             episode_reward += reward
