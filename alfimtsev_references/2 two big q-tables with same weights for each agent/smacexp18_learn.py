@@ -3,7 +3,6 @@
 https://github.com/oxwhirl/smac
 
 """
-import datetime
 import pickle
 import random
 
@@ -11,22 +10,6 @@ import numpy as np
 from smac.env import StarCraft2Env
 
 np.set_printoptions(threshold=np.inf)
-
-
-# определяем может ли агент сделать заданнное действие action_is
-def is_possible_action(avail_actions_ind, action_is):
-    ia = 0
-    # print ("in def len(avail_actions_ind) = ", len(avail_actions_ind))
-    while ia < len(avail_actions_ind):
-        # print ("ia = ", ia)
-        if avail_actions_ind[ia] == action_is:
-            ia = len(avail_actions_ind) + 1
-            return True
-        else:
-            ia = ia + 1
-
-    return False
-
 
 # получаем состояние агента как позицию на карте
 def get_stateFox(agent_posX, agent_posY):
@@ -102,50 +85,15 @@ def get_stateFox(agent_posX, agent_posY):
     return state
 
 
-"""    
-keys = [0 1 2 3 4 5]
-act_ind_decode= {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6}
-qt_arr[act_ind]= 0.0
-qt_arr[act_ind]= 0.0
-qt_arr[act_ind]= 0.0
-qt_arr[act_ind]= 0.0
-qt_arr[act_ind]= 0.0
-qt_arr[act_ind]= 0.0
-"""
-
-
 def select_actionFox(agent_id, state, avail_actions_ind, n_actionsFox, epsilon, Q_table):
     if random.uniform(0, 1) < (1 - epsilon):
         action = np.random.choice(avail_actions_ind)  # Explore action space
     else:
-        action = new_action_get(Q_table, agent_id, avail_actions_ind, state)
+        actions_val = {}
+        for action_index in avail_actions_ind:
+            actions_val[action_index] = Q_table[agent_id, int(state), action_index]
+        action = max(actions_val, key=actions_val.get)
 
-    return action
-
-
-def new_action_get(Q_table, agent_id, avail_actions_ind, state):
-    actions_val = {}
-    for action_index in avail_actions_ind:
-        actions_val[action_index] = Q_table[agent_id, int(state), action_index]
-    return max(actions_val, key=actions_val.get)
-
-
-def old_action_get(Q_table, agent_id, avail_actions_ind, state):
-    qt_arr = np.zeros(len(avail_actions_ind))
-    # Функция arange() возвращает одномерный массив с равномерно разнесенными значениями внутри заданного интервала.
-    keys = np.arange(len(avail_actions_ind))
-    # print ("keys =", keys)
-    # act_ind_decode= {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6}
-    # Функция zip объединяет в кортежи элементы из последовательностей переданных в качестве аргументов.
-    act_ind_decode = dict(zip(keys, avail_actions_ind))
-    # print ("act_ind_decode=", act_ind_decode)
-    stateFoxint = int(state)
-    # print ('in function stateFoxint=', stateFoxint)
-    for act_ind in range(len(avail_actions_ind)):
-        qt_arr[act_ind] = Q_table[agent_id, stateFoxint, act_ind_decode[act_ind]]
-        # print ("qt_arr[act_ind]=",qt_arr[act_ind])
-    # Returns the indices of the maximum values along an axis.
-    action = act_ind_decode[np.argmax(qt_arr)]  # Exploit learned values
     return action
 
 
@@ -200,7 +148,6 @@ def main():
     Q_table = np.zeros([n_agents, n_statesFox, n_actions])  # задаем пустую q таблицу №1
     # Q_table = np.zeros([n_statesFox, n_actions]) #задаем пустую q таблицу №2
     # print (Q_table2)
-    perf = []
 
     for e in range(n_episodes):
         # print("n_episode = ", e)
@@ -259,11 +206,8 @@ def main():
                 """avail_actions_ind of agent_id == 0: [1 2 3 4 5]"""
                 avail_actions_ind = np.nonzero(avail_actions)[0]
                 # выбираем действие
-                start = datetime.datetime.now()
                 action = select_actionFox(agent_id, stateFox[agent_id], avail_actions_ind, n_actionsFox, epsilon,
                                           Q_table)
-                elapsed = datetime.datetime.now() - start
-                perf.append(elapsed.microseconds)
 
                 # собираем действия от разных агентов
                 actions.append(action)
@@ -320,7 +264,6 @@ def main():
     print(Q_table)
     with open("se18.pkl", 'wb') as f:
         pickle.dump(Q_table, f)
-    print(f"Total execution time: {sum(perf)}")
 
 
 if __name__ == "__main__":
