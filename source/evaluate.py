@@ -15,18 +15,18 @@ class BaseSCEvaluator(abc.ABC):
         self.n_agents = env_info["n_agents"]
 
     @abc.abstractmethod
-    def evaluate(self, individual: individuals.BaseIndividual) -> Any:
+    def evaluate(self, individual: individuals.BaseInd) -> Any:
         pass
 
 
 class SCAbsPosEvaluator(BaseSCEvaluator):
-    def evaluate(self, individual: individuals.BaseIndividual) -> float:
+    def evaluate(self, individual: individuals.BaseInd) -> float:
         self.env.reset()
         terminated = False
         episode_reward = 0
         while not terminated:
             agents_states = {}
-            actions = np.zeros(self.n_agents, dtype=int)
+            avail_actions_indices = {}
 
             # get actions for all agents
             for agent_id in range(self.n_agents):
@@ -35,8 +35,10 @@ class SCAbsPosEvaluator(BaseSCEvaluator):
                 avail_actions = self.env.get_avail_agent_actions(agent_id)
                 # avail_actions = [0, 1, 1, 1, 1, 1, 0, 0, 0]
                 avail_actions_ind = np.nonzero(avail_actions)[0]
+                avail_actions_indices[agent_id] = avail_actions_ind
                 # avail_actions_ind = [1, 2, 3, 4, 5]
-                actions[agent_id] = individual.get_action(agents_states[agent_id], avail_actions_ind)
+
+            actions = individual.get_actions(agents_states, avail_actions_indices)
 
             reward, terminated, _ = self.env.step(actions)
             episode_reward += reward
