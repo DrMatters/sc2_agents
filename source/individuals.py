@@ -8,14 +8,14 @@ class BaseInd(abc.ABC):
     @abc.abstractmethod
     def get_actions(self, states: Dict[int, int],
                     avail_actions: Dict[int, np.array],
-                    epsilon: float = 0.7) -> Dict[int, int]:
+                    epsilon: float = 0.7) -> np.ndarray:
         pass
 
 
 class BaseGeneticInd(abc.ABC):
     @staticmethod
     @abc.abstractmethod
-    def initialize_new() -> 'BaseGeneticInd':
+    def init_simple() -> 'BaseGeneticInd':
         pass
 
     @staticmethod
@@ -31,40 +31,30 @@ class BaseGeneticInd(abc.ABC):
 
 
 class AgentwiseQInd(BaseInd, BaseGeneticInd):
-    def __init__(self, num_agents: int, num_states: int, num_actions: int,
-                 allocate_q_table: bool = True):
-        self.num_agents = num_agents
-        self.num_states = num_states
-        self.num_actions = num_actions
-        if allocate_q_table:
-            self.q_table = np.zeros((num_agents, num_states, num_actions),
-                                    np.float32)
-
-    @staticmethod
-    def from_q_table(q_table):
-        ind = AgentwiseQInd(q_table.shape[0], q_table.shape[1],
-                            q_table.shape[2], False)
-        ind.q_table = q_table
-        return ind
+    def __init__(self, q_table: np.ndarray):
+        self.num_agents = q_table.shape[0]
+        self.num_states = q_table.shape[1]
+        self.num_actions = q_table.shape[2]
+        self.q_table = q_table
 
     def get_actions(self, states: Dict[int, int],
                     avail_actions: Dict[int, np.array],
-                    epsilon: float = 0.7) -> Dict[int, int]:
+                    epsilon: float = 0.7) -> np.ndarray:
 
         # assume agents ids starts from 0 and goes up to num_agents - 1
         # (including the last one)
 
-        agents_actions = {}
+        agents_actions = np.zeros(self.num_agents)
         for agent_id in range(self.num_agents):
             agents_actions[agent_id] = self._get_action(
-                agent_id, states[agent_id], avail_actions[agent_id]
+                agent_id, states[agent_id], avail_actions[agent_id], epsilon
             )
         return agents_actions
 
     @staticmethod
-    def initialize_new(num_agents, num_states, num_actions) -> 'BaseGeneticInd':
+    def init_simple(ind_class, num_agents, num_states, num_actions):
         q_table = np.random.random((num_agents, num_states, num_actions))
-        return AgentwiseQInd.from_q_table(q_table)
+        return ind_class(q_table)
 
     @staticmethod
     def mate(left: 'AgentwiseQInd', right: 'AgentwiseQInd') \
@@ -72,13 +62,13 @@ class AgentwiseQInd(BaseInd, BaseGeneticInd):
 
         left_child_q_table = AgentwiseQInd._get_child(left, right)
         right_child_q_table = AgentwiseQInd._get_child(left, right)
-        left_child = AgentwiseQInd.from_q_table(left_child_q_table)
-        right_child = AgentwiseQInd.from_q_table(right_child_q_table)
-        return left_child, right_child
+        left.q_table = left_child_q_table
+        right.q_table = right_child_q_table
+        return left, right
 
     @staticmethod
     def mutate(ind: 'AgentwiseQInd', loc: float, scale: float,
-               indpb: float) -> 'AgentwiseQInd':
+               indpb: float) -> Tuple['AgentwiseQInd']:
         mutate_mask = np.random.random(ind.q_table.shape) < indpb
         mutate_level = np.random.normal(loc, scale, ind.q_table.shape)
         mutate_level_masked = np.multiply(mutate_mask, mutate_level)
@@ -88,7 +78,8 @@ class AgentwiseQInd(BaseInd, BaseGeneticInd):
         # we replace all 0s with 1, so when multiply they remain unchanged
         mutate_level_masked[mutate_level_masked == 0] = 1
         mutated_q_table = np.multiply(ind.q_table, mutate_level_masked)
-        return AgentwiseQInd.from_q_table(mutated_q_table)
+        ind.q_table = mutated_q_table
+        return ind,
 
     @staticmethod
     def _get_child(left, right):
@@ -101,11 +92,10 @@ class AgentwiseQInd(BaseInd, BaseGeneticInd):
                 child_q[agent_id] = np.copy(right.q_table[agent_id])
             else:
                 # array of [1, 0] with the shape of q table of a single agent
-                elems_from_left = np.random.randint(2,
-                                                    size=left.q_table.shape)
+                elems_from_left = np.random.randint(2, size=left.q_table[agent_id].shape)
                 child_q[agent_id] = np.where(elems_from_left,
-                                             left.q_table,
-                                             right.q_table)
+                                             left.q_table[agent_id],
+                                             right.q_table[agent_id])
         return child_q
 
     @staticmethod

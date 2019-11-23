@@ -1,5 +1,5 @@
 import abc
-from typing import Any
+from typing import Tuple
 
 import numpy as np
 import smac.env as sm_env
@@ -16,12 +16,12 @@ class BaseSCEvaluator(abc.ABC):
         self.epsilon = epsilon
 
     @abc.abstractmethod
-    def evaluate(self, individual: individuals.BaseInd) -> Any:
+    def evaluate(self, individual: individuals.BaseInd) -> Tuple[float]:
         pass
 
 
 class SCAbsPosEvaluator(BaseSCEvaluator):
-    def evaluate(self, individual: individuals.BaseInd) -> float:
+    def evaluate(self, individual: individuals.BaseInd) -> Tuple[float]:
         self.env.reset()
         terminated = False
         episode_reward = 0
@@ -46,7 +46,7 @@ class SCAbsPosEvaluator(BaseSCEvaluator):
 
             reward, terminated, _ = self.env.step(actions)
             episode_reward += reward
-        return episode_reward
+        return episode_reward,
 
     @staticmethod
     def _get_state_fox(agent_pos_x, agent_pos_y):
