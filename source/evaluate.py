@@ -19,13 +19,16 @@ class BaseSCEvaluator(abc.ABC):
         pass
 
 
-class SCAbsoluteEvaluator(BaseSCEvaluator):
-    def evaluate(self, individual: individuals.BaseIndividual) -> Any:
+class SCAbsPosEvaluator(BaseSCEvaluator):
+    def evaluate(self, individual: individuals.BaseIndividual) -> float:
         self.env.reset()
         terminated = False
+        episode_reward = 0
         while not terminated:
             agents_states = {}
             actions = np.zeros(self.n_agents, dtype=int)
+
+            # get actions for all agents
             for agent_id in range(self.n_agents):
                 agent_info = self.env.get_unit_by_id(agent_id)
                 agents_states[agent_id] = self._get_state_fox(agent_info.pos.x, agent_info.pos.y)
@@ -34,6 +37,10 @@ class SCAbsoluteEvaluator(BaseSCEvaluator):
                 avail_actions_ind = np.nonzero(avail_actions)[0]
                 # avail_actions_ind = [1, 2, 3, 4, 5]
                 actions[agent_id] = individual.get_action(agents_states[agent_id], avail_actions_ind)
+
+            reward, terminated, _ = self.env.step(actions)
+            episode_reward += reward
+        return episode_reward
 
     @staticmethod
     def _get_state_fox(agent_pos_x, agent_pos_y):
