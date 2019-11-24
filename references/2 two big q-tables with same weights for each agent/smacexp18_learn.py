@@ -254,9 +254,9 @@ def main():
             ##########################################################################            
 
         # Total reward in episode 4 = 20.0
-        print("Total reward in episode {} = {}".format(e, episode_reward))
+        print(f"Total reward in episode {e} = {episode_reward}")
         # get_stats()= {'battles_won': 2, 'battles_game': 5, 'battles_draw': 0, 'win_rate': 0.4, 'timeouts': 0, 'restarts': 0}
-        print("get_stats()=", env.get_stats())
+        print(f"get_stats() = {env.get_stats()}")
 
     # env.save_replay() """Save a replay."""
     """"Close StarCraft II."""""

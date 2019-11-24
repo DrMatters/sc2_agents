@@ -6,8 +6,12 @@ https://github.com/oxwhirl/smac
 from smac.env import StarCraft2Env
 import numpy as np
 #import sys
-import random 
 import pickle
+# import sys
+import pickle
+
+import numpy as np
+from smac.env import StarCraft2Env
 
 #from gym.spaces import Discrete, Box, Dict
 
@@ -31,84 +35,78 @@ def is_possible_action (avail_actions_ind, action_is):
 
 
 #получаем состояние агента как позицию на карте
-def get_stateFox(agent_id, agent_posX, agent_posY):
+def get_stateFox(agent_posX, agent_posY):
     
-    if agent_id == 0:
+    state = 11
+    #print (agent_posX)
+    #print (agent_posY)
+    
+    if 6 < agent_posX < 7 and 16.2 < agent_posY < 17 :
+        state = 0
+    elif 7 < agent_posX < 8 and 16.2 < agent_posY < 17 :
+        state = 1
+    elif 8 < agent_posX < 8.9 and 16.2 < agent_posY < 17 :
+        state = 2
+    elif 8.9 < agent_posX < 9.1 and 16.2 < agent_posY < 17 :
         state = 3
-        
-        if 6 < agent_posX < 7 and 15 < agent_posY < 16.5 :
-            state = 0
-        elif 7 < agent_posX < 8 and 15 < agent_posY < 16.5  :
-            state = 1
-        elif 8 < agent_posX < 8.9 and 15 < agent_posY < 16.5  :
-            state = 2
-        elif 8.9 < agent_posX < 9.1 and 15 < agent_posY < 16.5  :
-            state = 3
-        elif 9.1 < agent_posX < 10 and 15 < agent_posY < 16.5  :
-            state = 4
-        elif 10 < agent_posX < 11 and 15 < agent_posY < 16.5  :
-            state = 5
-        elif 11 < agent_posX < 12 and 15 < agent_posY < 16.5  :
-            state = 6
-        elif 12 < agent_posX < 13.1 and 15 < agent_posY < 16.5  :
-            state = 7
-        elif 6 < agent_posX < 7 and 14 < agent_posY < 15 :
-            state = 8
-        elif 7 < agent_posX < 8 and 14 < agent_posY < 15 :
-            state = 9
-        elif 8 < agent_posX < 8.9 and 14 < agent_posY < 15 :
-            state = 10
-        elif 8.9 < agent_posX < 9.1 and 14 < agent_posY < 15 :
-            state = 11
-        elif 9.1 < agent_posX < 10 and 14 < agent_posY < 15 :
-            state = 12
-        elif 10 < agent_posX < 11 and 14 < agent_posY < 15 :
-            state = 13
-        elif 11 < agent_posX < 12 and 14 < agent_posY < 15 :
-            state = 14
-        elif 12 < agent_posX < 13.1 and 14 < agent_posY < 15 :
-            state = 15
-        
-        
-    if agent_id == 1:
+    elif 9.1 < agent_posX < 10 and 16.2 < agent_posY < 17 :
+        state = 4
+    elif 10 < agent_posX < 11 and 16.2 < agent_posY < 17 :
+        state = 5
+    elif 11 < agent_posX < 12 and 16.2 < agent_posY < 17 :
+        state = 6
+    elif 12 < agent_posX < 13.1 and 16.2 < agent_posY < 17 :
+        state = 7
+    elif 6 < agent_posX < 7 and 15.9 < agent_posY < 16.2 :
+        state = 8
+    elif 7 < agent_posX < 8 and 15.9 < agent_posY < 16.2 :
+        state = 9
+    elif 8 < agent_posX < 8.9 and 15.9 < agent_posY < 16.2 :
+        state = 10
+    elif 8.9 < agent_posX < 9.1 and 15.9 < agent_posY < 16.2 :
         state = 11
-        
-        if 6 < agent_posX < 7 and 16.2 < agent_posY < 17 :
-            state = 0
-        elif 7 < agent_posX < 8 and 16.2 < agent_posY < 17 :
-            state = 1
-        elif 8 < agent_posX < 8.9 and 16.2 < agent_posY < 17 :
-            state = 2
-        elif 8.9 < agent_posX < 9.1 and 16.2 < agent_posY < 17 :
-            state = 3
-        elif 9.1 < agent_posX < 10 and 16.2 < agent_posY < 17 :
-            state = 4
-        elif 10 < agent_posX < 11 and 16.2 < agent_posY < 17 :
-            state = 5
-        elif 11 < agent_posX < 12 and 16.2 < agent_posY < 17 :
-            state = 6
-        elif 12 < agent_posX < 13.1 and 16.2 < agent_posY < 17 :
-            state = 7
-        elif 6 < agent_posX < 7 and 15.5 < agent_posY < 16.2 :
-            state = 8
-        elif 7 < agent_posX < 8 and 15.5 < agent_posY < 16.2 :
-            state = 9
-        elif 8 < agent_posX < 8.9 and 15.5 < agent_posY < 16.2 :
-            state = 10
-        elif 8.9 < agent_posX < 9.1 and 15.5 < agent_posY < 16.2 :
-            state = 11
-        elif 9.1 < agent_posX < 10 and 15.5 < agent_posY < 16.2 :
-            state = 12
-        elif 10 < agent_posX < 11 and 15.5 < agent_posY < 16.2 :
-            state = 13
-        elif 11 < agent_posX < 12 and 15.5 < agent_posY < 16.2 :
-            state = 14
-        elif 12 < agent_posX < 13.1 and 15.5 < agent_posY < 16.2 :
-            state = 15
+    elif 9.1 < agent_posX < 10 and 15.9 < agent_posY < 16.2 :
+        state = 12
+    elif 10 < agent_posX < 11 and 15.9 < agent_posY < 16.2 :
+        state = 13
+    elif 11 < agent_posX < 12 and 15.9 < agent_posY < 16.2 :
+        state = 14
+    elif 12 < agent_posX < 13.1 and 15.9 < agent_posY < 16.2 :
+        state = 15
+    elif 6 < agent_posX < 7 and 15 < agent_posY < 15.9 :
+        state = 16
+    elif 7 < agent_posX < 8 and 15 < agent_posY < 15.9  :
+        state = 17
+    elif 8 < agent_posX < 8.9 and 15 < agent_posY < 15.9  :
+        state = 18
+    elif 8.9 < agent_posX < 9.1 and 15 < agent_posY < 15.9  :
+        state = 19
+    elif 9.1 < agent_posX < 10 and 15 < agent_posY < 15.9  :
+        state = 20
+    elif 10 < agent_posX < 11 and 15 < agent_posY < 15.9  :
+        state = 21
+    elif 11 < agent_posX < 12 and 15 < agent_posY < 15.9  :
+        state = 22
+    elif 12 < agent_posX < 13.1 and 15 < agent_posY < 15.9  :
+        state = 23
+    elif 6 < agent_posX < 7 and 14 < agent_posY < 15 :
+        state = 24
+    elif 7 < agent_posX < 8 and 14 < agent_posY < 15 :
+        state = 25
+    elif 8 < agent_posX < 8.9 and 14 < agent_posY < 15 :
+        state = 26
+    elif 8.9 < agent_posX < 9.1 and 14 < agent_posY < 15 :
+        state = 27
+    elif 9.1 < agent_posX < 10 and 14 < agent_posY < 15 :
+        state = 28
+    elif 10 < agent_posX < 11 and 14 < agent_posY < 15 :
+        state = 29
+    elif 11 < agent_posX < 12 and 14 < agent_posY < 15 :
+        state = 30
+    elif 12 < agent_posX < 13.1 and 14 < agent_posY < 15 :
+        state = 31
     
-   
     return state
-
 
 """    
 keys = [0 1 2 3 4 5]
@@ -122,7 +120,7 @@ qt_arr[act_ind]= 0.0
 """
 
 def select_actionFox(agent_id, state, avail_actions_ind, n_actionsFox, epsilon, Q_table):
-    
+
     qt_arr = np.zeros(len(avail_actions_ind))
     #Функция arange() возвращает одномерный массив с равномерно разнесенными значениями внутри заданного интервала. 
     keys = np.arange(len(avail_actions_ind))
@@ -130,13 +128,13 @@ def select_actionFox(agent_id, state, avail_actions_ind, n_actionsFox, epsilon, 
     #act_ind_decode= {0: 1, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6}
     #Функция zip объединяет в кортежи элементы из последовательностей переданных в качестве аргументов.
     act_ind_decode = dict(zip(keys, avail_actions_ind))
-    
-    stateFoxint = int(state)
     #print ("act_ind_decode=", act_ind_decode)
+    stateFoxint = int(state)
     
     for act_ind in range(len(avail_actions_ind)):
-        qt_arr[act_ind] = Q_table[agent_id, stateFoxint, act_ind_decode[act_ind]]
+            qt_arr[act_ind] = Q_table[agent_id, stateFoxint, act_ind_decode[act_ind]]
             #print ("qt_arr[act_ind]=",qt_arr[act_ind])
+
 
     #Returns the indices of the maximum values along an axis.
     # Exploit learned values
@@ -194,7 +192,7 @@ def main():
     #print ("n_actions=", n_actions)
     n_agents = env_info["n_agents"]
    
-    n_episodes = 30 # количество эпизодов
+    n_episodes = 10 # количество эпизодов
     
     ############### Параметры обучения здесь нужны для функции select_actionFox ################################
     alpha = 0.9   #learning rate sayon - 0.5
@@ -206,7 +204,7 @@ def main():
     ##################################################################################################
     total_reward = 0
     
-    with open("se20.pkl", 'rb') as f:
+    with open("se18.pkl", 'rb') as f:
         Q_table = pickle.load(f)
         print (Q_table)
    
@@ -254,17 +252,24 @@ def main():
             stateFox= np.zeros([n_agents])
            
            
-            '''agent_id= 0, agent_id= 1'''
+            '''agent_id= 0, agent_id= 1, agent_id= 2'''
             for agent_id in range(n_agents):
                   
                 #получаем характеристики юнита
                 unit = env.get_unit_by_id(agent_id)
                 #получаем состояние по координатам юнита
-                stateFox[agent_id] = get_stateFox(agent_id, unit.pos.x, unit.pos.y)
-                #print ("agent_id =", agent_id)
-                #print ("stateFox[agent_id] =", stateFox[agent_id])
+                stateFox[agent_id] = get_stateFox(unit.pos.x, unit.pos.y)
+                '''
+                if (e == 0 and raz == 0) or (e==1 and raz == 0) or (e==3 and raz == 0):
+                    print ("agent_id=", agent_id)
+                    print ("state=", stateFox)
+                '''
                 
-                
+                '''
+                tag = unit.tag #много разных характеристик юнита
+                x = unit.pos.x
+                y = unit.pos.y
+                '''
                 """Returns the available actions for agent_id."""
                 """avail_actions= [0, 1, 1, 1, 1, 1, 0, 0, 0]"""
                 avail_actions = env.get_avail_agent_actions(agent_id)

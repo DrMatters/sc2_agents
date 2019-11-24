@@ -3,11 +3,12 @@
 https://github.com/oxwhirl/smac
 
 """
-from smac.env import StarCraft2Env
-import numpy as np
-#import sys
-import random 
 import pickle
+# import sys
+import random
+
+import numpy as np
+from smac.env import StarCraft2Env
 
 #from gym.spaces import Discrete, Box, Dict
 
@@ -36,74 +37,74 @@ def get_stateFox(agent_id, agent_posX, agent_posY):
     if agent_id == 0:
         state = 3
         
-        if 6 < agent_posX < 7 and 15 < agent_posY < 16.5 :
+        if 6 < agent_posX < 7 and 15 < agent_posY:
             state = 0
-        elif 7 < agent_posX < 8 and 15 < agent_posY < 16.5  :
+        elif 7 < agent_posX < 8 and 15 < agent_posY   :
             state = 1
-        elif 8 < agent_posX < 8.9 and 15 < agent_posY < 16.5  :
+        elif 8 < agent_posX < 8.9 and 15 < agent_posY   :
             state = 2
-        elif 8.9 < agent_posX < 9.1 and 15 < agent_posY < 16.5  :
+        elif 8.9 < agent_posX < 9.1 and 15 < agent_posY   :
             state = 3
-        elif 9.1 < agent_posX < 10 and 15 < agent_posY < 16.5  :
+        elif 9.1 < agent_posX < 10 and 15 < agent_posY   :
             state = 4
-        elif 10 < agent_posX < 11 and 15 < agent_posY < 16.5  :
+        elif 10 < agent_posX < 11 and 15 < agent_posY  :
             state = 5
-        elif 11 < agent_posX < 12 and 15 < agent_posY < 16.5  :
+        elif 11 < agent_posX < 12 and 15 < agent_posY   :
             state = 6
-        elif 12 < agent_posX < 13.1 and 15 < agent_posY < 16.5  :
+        elif 12 < agent_posX < 13.1 and 15 < agent_posY   :
             state = 7
-        elif 6 < agent_posX < 7 and 14 < agent_posY < 15 :
+        elif 6 < agent_posX < 7 and  agent_posY < 15 :
             state = 8
-        elif 7 < agent_posX < 8 and 14 < agent_posY < 15 :
+        elif 7 < agent_posX < 8 and  agent_posY < 15 :
             state = 9
-        elif 8 < agent_posX < 8.9 and 14 < agent_posY < 15 :
+        elif 8 < agent_posX < 8.9 and  agent_posY < 15 :
             state = 10
-        elif 8.9 < agent_posX < 9.1 and 14 < agent_posY < 15 :
+        elif 8.9 < agent_posX < 9.1 and  agent_posY < 15 :
             state = 11
-        elif 9.1 < agent_posX < 10 and 14 < agent_posY < 15 :
+        elif 9.1 < agent_posX < 10 and  agent_posY < 15 :
             state = 12
-        elif 10 < agent_posX < 11 and 14 < agent_posY < 15 :
+        elif 10 < agent_posX < 11 and  agent_posY < 15 :
             state = 13
-        elif 11 < agent_posX < 12 and 14 < agent_posY < 15 :
+        elif 11 < agent_posX < 12 and  agent_posY < 15 :
             state = 14
-        elif 12 < agent_posX < 13.1 and 14 < agent_posY < 15 :
+        elif 12 < agent_posX < 13.1 and  agent_posY < 15 :
             state = 15
         
         
     if agent_id == 1:
         state = 11
         
-        if 6 < agent_posX < 7 and 16.2 < agent_posY < 17 :
+        if 6 < agent_posX < 7 and 16.2 < agent_posY  :
             state = 0
-        elif 7 < agent_posX < 8 and 16.2 < agent_posY < 17 :
+        elif 7 < agent_posX < 8 and 16.2 < agent_posY  :
             state = 1
-        elif 8 < agent_posX < 8.9 and 16.2 < agent_posY < 17 :
+        elif 8 < agent_posX < 8.9 and 16.2 < agent_posY  :
             state = 2
-        elif 8.9 < agent_posX < 9.1 and 16.2 < agent_posY < 17 :
+        elif 8.9 < agent_posX < 9.1 and 16.2 < agent_posY  :
             state = 3
-        elif 9.1 < agent_posX < 10 and 16.2 < agent_posY < 17 :
+        elif 9.1 < agent_posX < 10 and 16.2 < agent_posY  :
             state = 4
-        elif 10 < agent_posX < 11 and 16.2 < agent_posY < 17 :
+        elif 10 < agent_posX < 11 and 16.2 < agent_posY  :
             state = 5
-        elif 11 < agent_posX < 12 and 16.2 < agent_posY < 17 :
+        elif 11 < agent_posX < 12 and 16.2 < agent_posY  :
             state = 6
-        elif 12 < agent_posX < 13.1 and 16.2 < agent_posY < 17 :
+        elif 12 < agent_posX < 13.1 and 16.2 < agent_posY :
             state = 7
-        elif 6 < agent_posX < 7 and 15.5 < agent_posY < 16.2 :
+        elif 6 < agent_posX < 7 and  agent_posY < 16.2 :
             state = 8
-        elif 7 < agent_posX < 8 and 15.5 < agent_posY < 16.2 :
+        elif 7 < agent_posX < 8 and agent_posY < 16.2 :
             state = 9
-        elif 8 < agent_posX < 8.9 and 15.5 < agent_posY < 16.2 :
+        elif 8 < agent_posX < 8.9 and  agent_posY < 16.2 :
             state = 10
-        elif 8.9 < agent_posX < 9.1 and 15.5 < agent_posY < 16.2 :
+        elif 8.9 < agent_posX < 9.1 and  agent_posY < 16.2 :
             state = 11
-        elif 9.1 < agent_posX < 10 and 15.5 < agent_posY < 16.2 :
+        elif 9.1 < agent_posX < 10 and  agent_posY < 16.2 :
             state = 12
-        elif 10 < agent_posX < 11 and 15.5 < agent_posY < 16.2 :
+        elif 10 < agent_posX < 11 and  agent_posY < 16.2 :
             state = 13
-        elif 11 < agent_posX < 12 and 15.5 < agent_posY < 16.2 :
+        elif 11 < agent_posX < 12 and  agent_posY < 16.2 :
             state = 14
-        elif 12 < agent_posX < 13.1 and 15.5 < agent_posY < 16.2 :
+        elif 12 < agent_posX < 13.1 and  agent_posY < 16.2 :
             state = 15
     
    
@@ -158,7 +159,7 @@ def main():
     """The StarCraft II environment for decentralised multi-agent micromanagement scenarios."""
     '''difficulty ="1" is VeryEasy'''
     #replay_dir="D:\StarCraft II\Replays\smacfox"
-    env = StarCraft2Env(map_name="2m2zFOX", difficulty="1")
+    env = StarCraft2Env(map_name="2m2mFOX", difficulty="1")
     
     '''env_info= {'state_shape': 48, 'obs_shape': 30, 'n_actions': 9, 'n_agents': 3, 'episode_limit': 60}'''
     env_info = env.get_env_info()
@@ -193,12 +194,12 @@ def main():
     #print ("n_actions=", n_actions)
     n_agents = env_info["n_agents"]
    
-    n_episodes = 30 # количество эпизодов lapan = 20
+    n_episodes = 200 # количество эпизодов lapan = 20
     
    
-    alpha = 0.9    #learning rate sayon - 0.5 больш - 0.9 Lapan = 0.2
+    alpha = 0.5    #learning rate sayon - 0.5 больш - 0.9 Lapan = 0.2
     gamma = 0.9   #discount factor sayon - 0.9 больш - 0.5 lapan = 0.9
-    epsilon = 0.1 #e-greedy sayon - 0.3 больш - 0.7 lapan = = 1.0 (100% random actions)
+    epsilon = 0.7 #e-greedy sayon - 0.3 больш - 0.7 lapan = = 1.0 (100% random actions)
     
     n_statesFox = 16 # количество состояний нашего мира-сетки
     #n_statesFox1 = 16 # количество состояний нашего мира-сетки

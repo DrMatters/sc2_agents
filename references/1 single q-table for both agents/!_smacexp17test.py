@@ -3,11 +3,11 @@
 https://github.com/oxwhirl/smac
 
 """
-from smac.env import StarCraft2Env
-import numpy as np
 # import sys
-import random
 import pickle
+
+import numpy as np
+from smac.env import StarCraft2Env
 
 # from gym.spaces import Discrete, Box, Dict
 
