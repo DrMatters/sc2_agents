@@ -12,7 +12,7 @@ from source import individuals
 
 random.seed(42)
 np.random.seed(42)
-env = StarCraft2Env(map_name="2m2mFOX", difficulty="1")
+env = StarCraft2Env(map_name="2m2zFOX", difficulty="1")
 evaluator = evaluate.SCAbsPosEvaluator(env)
 
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
