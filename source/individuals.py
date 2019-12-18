@@ -81,6 +81,14 @@ class AgentwiseQInd(BaseInd, BaseGeneticInd):
         ind.q_table = mutated_q_table
         return ind,
 
+    def save(self, file):
+        np.save(file, self.q_table)
+
+    @staticmethod
+    def load(file):
+        q_table = np.load(file)
+        return AgentwiseQInd(q_table)
+
     @staticmethod
     def _get_child(left, right):
         child_q = np.zeros(left.q_table.shape)
