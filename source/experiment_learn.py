@@ -50,7 +50,7 @@ def prepare_env():
                      num_states=32, num_actions=evaluator.n_actions)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", evaluator.evaluate)
-    toolbox.register("mate", individuals.AgentwiseQInd.mate)
+    toolbox.register("mate", individuals.AgentwiseQInd.mate_avg)
     toolbox.register("mutate", individuals.AgentwiseQInd.mutate, loc=1,
                      scale=0.05, indpb=0.05)
     toolbox.register("select", tools.selTournament, tournsize=3)

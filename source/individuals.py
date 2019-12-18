@@ -60,11 +60,21 @@ class AgentwiseQInd(BaseInd, BaseGeneticInd):
     def mate(left: 'AgentwiseQInd', right: 'AgentwiseQInd') \
             -> Tuple['AgentwiseQInd', 'AgentwiseQInd']:
 
-        left_child_q_table = AgentwiseQInd._get_child(left, right)
-        right_child_q_table = AgentwiseQInd._get_child(left, right)
+        left_child_q_table = AgentwiseQInd._get_child_rand_replace(left, right)
+        right_child_q_table = AgentwiseQInd._get_child_rand_replace(left, right)
         left.q_table = left_child_q_table
         right.q_table = right_child_q_table
         return left, right
+
+    @staticmethod
+    def mate_avg(left: 'AgentwiseQInd', right: 'AgentwiseQInd') \
+            -> Tuple['AgentwiseQInd', 'AgentwiseQInd']:
+        left_child_q_table = AgentwiseQInd._get_child_rand_avg(left, right)
+        right_child_q_table = AgentwiseQInd._get_child_rand_avg(left, right)
+        left.q_table = left_child_q_table
+        right.q_table = right_child_q_table
+        return left, right
+
 
     @staticmethod
     def mutate(ind: 'AgentwiseQInd', loc: float, scale: float,
@@ -90,7 +100,7 @@ class AgentwiseQInd(BaseInd, BaseGeneticInd):
         return AgentwiseQInd(q_table)
 
     @staticmethod
-    def _get_child(left, right):
+    def _get_child_rand_replace(left, right):
         child_q = np.zeros(left.q_table.shape)
         for agent_id in range(left.num_agents):
             agent_q_table_from = AgentwiseQInd._get_rand_q_table_from()
@@ -105,6 +115,16 @@ class AgentwiseQInd(BaseInd, BaseGeneticInd):
                                              left.q_table[agent_id],
                                              right.q_table[agent_id])
         return child_q
+
+    @staticmethod
+    def _get_child_rand_avg(left, right):
+        # child_q = np.copy(left.q_table)
+        # left_parent_allele_mask = np.random.random(left.q_table.shape) > 0.5
+        # child_q = child_q * left_parent_allele_mask
+        #
+        # right_parent_allele_mask = left_parent_allele_mask == 0
+        # child_q += right.q_table * right_parent_allele_mask
+        return (left.q_table + right.q_table) / 2
 
     @staticmethod
     def _get_rand_q_table_from():
