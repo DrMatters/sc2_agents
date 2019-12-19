@@ -28,18 +28,11 @@ def main():
 
     random.seed(42)
     np.random.seed(42)
-    env = StarCraft2Env(map_name="2m2zFOX", difficulty="1", seed=42)
+    env = StarCraft2Env(map_name="2m2zFOX", difficulty="1", seed=42,
+                        realtime=False)
     evaluator = evaluate.SCAbsPosEvaluator(env)
 
-    eval_res = []
-    for i in range(NUM_EVAL):
-        eval_res.append(evaluator.evaluate(top_individual))
-
-    print(f'Top individual evaluation')
-    print(f'min: {np.min(eval_res)}')
-    print(f'max: {np.max(eval_res)}')
-    print(f'mean: {np.mean(eval_res)}')
-    print(f'std: {np.std(eval_res)}')
+    evaluator.evaluate_single(top_individual)
 
     return 0
 

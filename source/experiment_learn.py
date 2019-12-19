@@ -9,6 +9,7 @@ from source import evaluate, individuals
 
 POPULATION = 10
 NUM_GENERATIONS = 10
+EVALUATE_TOP = True
 
 
 def main():
@@ -25,6 +26,11 @@ def main():
     algorithms.eaSimple(pop, toolbox, cxpb=0.7, mutpb=0.2, ngen=NUM_GENERATIONS,
                         stats=stats, halloffame=hof)
     save_top_individual(hof)
+
+    if EVALUATE_TOP:
+        print("results of evaluation of top individual")
+        evaluator.evaluate_single(hof.items[0])
+
     return pop, stats, hof
 
 

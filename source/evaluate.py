@@ -19,6 +19,20 @@ class BaseSCEvaluator(abc.ABC):
     def evaluate(self, individual: individuals.BaseInd) -> Tuple[float]:
         pass
 
+    def evaluate_single(self, individual, n=10):
+        eval_res = []
+        for i in range(n):
+            res = self.evaluate(individual)
+            eval_res.append(res)
+            print(f'Episode result: {res}')
+
+        print(f'Top individual evaluation')
+        print(f'min: {np.min(eval_res)}')
+        print(f'max: {np.max(eval_res)}')
+        print(f'mean: {np.mean(eval_res)}')
+        print(f'std: {np.std(eval_res)}')
+        return eval_res
+
 
 class SCAbsPosEvaluator(BaseSCEvaluator):
     def evaluate(self, individual: individuals.BaseInd) -> Tuple[float]:
