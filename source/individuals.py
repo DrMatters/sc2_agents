@@ -57,7 +57,7 @@ class AgentwiseQInd(BaseInd, BaseGeneticInd):
         return ind_class(q_table)
 
     @staticmethod
-    def mate(left: 'AgentwiseQInd', right: 'AgentwiseQInd') \
+    def mate_replace(left: 'AgentwiseQInd', right: 'AgentwiseQInd') \
             -> Tuple['AgentwiseQInd', 'AgentwiseQInd']:
 
         left_child_q_table = AgentwiseQInd._get_child_rand_replace(left, right)
@@ -67,7 +67,7 @@ class AgentwiseQInd(BaseInd, BaseGeneticInd):
         return left, right
 
     @staticmethod
-    def mate_avg(left: 'AgentwiseQInd', right: 'AgentwiseQInd') \
+    def mate(left: 'AgentwiseQInd', right: 'AgentwiseQInd') \
             -> Tuple['AgentwiseQInd', 'AgentwiseQInd']:
         left_child_q_table = AgentwiseQInd._get_child_rand_avg(left, right)
         right_child_q_table = AgentwiseQInd._get_child_rand_avg(left, right)

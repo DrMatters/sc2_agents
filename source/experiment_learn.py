@@ -1,5 +1,6 @@
 import random
 from datetime import datetime
+from typing import Type
 
 import numpy as np
 from deap import algorithms, base, creator, tools
@@ -13,7 +14,7 @@ EVALUATE_TOP = True
 
 
 def main():
-    toolbox, evaluator = prepare_env()
+    toolbox, evaluator = prepare_env(individuals.AgentwiseQInd)
 
     pop = toolbox.population(n=POPULATION)
     hof = tools.HallOfFame(1)
@@ -40,24 +41,24 @@ def save_top_individual(hof):
     top.save(f'{now}---top_individual_q_table.npy')
 
 
-def prepare_env():
+def prepare_env(individual_class: Type[individuals.BaseGeneticInd]):
     random.seed(42)
     np.random.seed(42)
     env = StarCraft2Env(map_name="2m2zFOX", difficulty="1", seed=42)
 
     evaluator = evaluate.SCAbsPosEvaluator(env)
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-    creator.create("Individual", individuals.AgentwiseQInd,
+    creator.create("Individual", individual_class,
                    fitness=creator.FitnessMax)
 
     toolbox = base.Toolbox()
-    toolbox.register("individual", individuals.AgentwiseQInd.init_simple,
+    toolbox.register("individual", individual_class.init_simple,
                      creator.Individual, num_agents=evaluator.n_agents,
                      num_states=32, num_actions=evaluator.n_actions)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", evaluator.evaluate)
-    toolbox.register("mate", individuals.AgentwiseQInd.mate_avg)
-    toolbox.register("mutate", individuals.AgentwiseQInd.mutate, loc=1,
+    toolbox.register("mate", individual_class.mate)
+    toolbox.register("mutate", individual_class.mutate, loc=1,
                      scale=0.05, indpb=0.05)
     toolbox.register("select", tools.selTournament, tournsize=3)
     return toolbox, evaluator
