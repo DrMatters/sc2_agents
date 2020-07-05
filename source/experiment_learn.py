@@ -1,4 +1,5 @@
 import random
+import os
 from datetime import datetime
 from typing import Type
 
@@ -11,7 +12,7 @@ from source import evaluate, individuals
 POPULATION = 10
 NUM_GENERATIONS = 10
 EVALUATE_TOP = True
-
+SC2_PATH = 'D:\Distrib\Kirill\Programs\StarCraft II'
 
 def main():
     toolbox, evaluator = prepare_env(individuals.AgentwiseQInd)
@@ -44,6 +45,7 @@ def save_top_individual(hof):
 def prepare_env(individual_class: Type[individuals.BaseGeneticInd]):
     random.seed(42)
     np.random.seed(42)
+    os.environ['SC2PATH'] = SC2_PATH
     env = StarCraft2Env(map_name="2m2zFOX", difficulty="1", seed=42)
 
     evaluator = evaluate.SCAbsPosEvaluator(env)
