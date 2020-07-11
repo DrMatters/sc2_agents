@@ -1,5 +1,5 @@
 from smac.env import StarCraft2Env
-from RL_brain import DeepQNetwork
+from source.DQN_smac.RL_brain import DeepQNetwork
 import numpy as np
 import tensorflow as tf
 
