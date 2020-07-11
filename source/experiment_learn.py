@@ -12,7 +12,7 @@ from source import evaluate, individuals
 POPULATION = 10
 NUM_GENERATIONS = 10
 EVALUATE_TOP = True
-SC2_PATH = 'D:\Distrib\Kirill\Programs\StarCraft II'
+SC2_PATH = 'D:\Prog\SC2_reinforcement_learning\StarCraft II'
 
 def main():
     toolbox, evaluator = prepare_env(individuals.AgentwiseQInd)
@@ -56,7 +56,7 @@ def prepare_env(individual_class: Type[individuals.BaseGeneticInd]):
     toolbox = base.Toolbox()
     toolbox.register("individual", individual_class.init_simple,
                      creator.Individual, num_agents=evaluator.n_agents,
-                     num_states=32, num_actions=evaluator.n_actions)
+                     num_states=evaluator.get_num_states(), num_actions=evaluator.n_actions)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", evaluator.evaluate)
     toolbox.register("mate", individual_class.mate)

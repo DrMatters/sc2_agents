@@ -16,6 +16,10 @@ class BaseSCEvaluator(abc.ABC):
         self.epsilon = epsilon
 
     @abc.abstractmethod
+    def get_num_states(self) -> int:
+        pass
+
+    @abc.abstractmethod
     def evaluate(self, individual: individuals.BaseInd) -> Tuple[float]:
         pass
 
@@ -35,6 +39,9 @@ class BaseSCEvaluator(abc.ABC):
 
 
 class SCAbsPosEvaluator(BaseSCEvaluator):
+    def get_num_states(self) -> int:
+        return 32
+
     def evaluate(self, individual: individuals.BaseInd) -> Tuple[float]:
         self.env.reset()
         terminated = False
@@ -61,6 +68,11 @@ class SCAbsPosEvaluator(BaseSCEvaluator):
             reward, terminated, _ = self.env.step(actions)
             episode_reward += reward
         return episode_reward,
+
+    def get_agent_state(self, agent_id):
+        agent_info = self.env.get_unit_by_id(agent_id)
+        agent_state = self._get_state_fox(agent_info.pos.x, agent_info.pos.y)
+        return agent_state
 
     @staticmethod
     def _get_state_fox(agent_pos_x, agent_pos_y):
