@@ -1,5 +1,5 @@
 from smac.env import StarCraft2Env
-from source.DQN_smac.RL_brain import DeepQNetwork
+from source.DQN_smac_tf.RL_brain import DeepQNetwork
 import datetime
 import numpy as np
 import tensorflow as tf
@@ -56,13 +56,7 @@ def run_this(RL_set, n_episode, learn_freq, Num_Exploration, n_agents, ratio_tot
                 reward_hl_en_new.append(env.get_enemy_health(agent_id))
 
             for agent_id in range(n_agents):
-                if (agent_id in dead_unit):
-                    reward = 0
-                elif (action_set_execute[agent_id] != action_set_actual[
-                    agent_id]):  # 当输出动作无法执行时，执行替代动作，但是把输出动作进行保存并且给与一个负的奖励
-                    reward = -2
-
-                elif (action_set_execute[agent_id] > 5):
+                if (action_set_execute[agent_id] > 5):
                     target_id = action_set_execute[agent_id] - n_actions_no_attack
                     health_reduce_en = reward_hl_en_old[target_id] - reward_hl_en_new[target_id]
                     if (health_reduce_en > 0):
@@ -74,6 +68,9 @@ def run_this(RL_set, n_episode, learn_freq, Num_Exploration, n_agents, ratio_tot
                         reward = 1
                 else:
                     reward = (reward_hl_own_new[agent_id] - reward_hl_own_old[agent_id]) * 5
+
+                if (agent_id in dead_unit):
+                    reward = 0
 
                 episode_reward_agent[agent_id] += reward
 
@@ -92,7 +89,6 @@ def run_this(RL_set, n_episode, learn_freq, Num_Exploration, n_agents, ratio_tot
 
     # end of game
     print('game over')
-    print(env.get_stats())
     env.close()
 
 
@@ -104,12 +100,12 @@ if __name__ == "__main__":
 
     vector_obs_len = 179  # local observation
     n_actions = env_info["n_actions"]
-    n_episode = 200
+    n_episode = 400
     n_agents = env_info["n_agents"]
     episode_len = env_info["episode_limit"]
     learn_freq = 1
-    timesteps = 300000
-    Num_Exploration = int(timesteps * 0.1)
+    timesteps = 800000
+    Num_Exploration = timesteps * 0.1
     Num_Training = timesteps - Num_Exploration
     ratio_total_reward = 0.2
 
