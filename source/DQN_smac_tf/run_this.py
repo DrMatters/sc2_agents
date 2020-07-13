@@ -3,7 +3,7 @@ from source.DQN_smac_tf.RL_brain import DeepQNetwork
 import numpy as np
 import tensorflow as tf
 
-def run_this(agents_models, n_episode, learn_freq, Num_Exploration, n_agents, ratio_total_reward):
+def run_this(agents_models, n_episode, learn_freq, n_exploration_episodes, n_agents, ratio_total_reward):
     step = 0
     training_step = 0
     n_actions_no_attack = 6
@@ -27,12 +27,12 @@ def run_this(agents_models, n_episode, learn_freq, Num_Exploration, n_agents, ra
             action_set_execute = []
             dead_unit = []
             for agent_id in range(n_agents):
-                action_to_choose = agents_models[agent_id].choose_action(observation_set[agent_id])
-                action_set_actual.append(action_to_choose)
+                selected_action = agents_models[agent_id].choose_action(observation_set[agent_id])
+                action_set_actual.append(selected_action)
                 avail_actions = env.get_avail_agent_actions(agent_id)
                 avail_actions_ind = np.nonzero(avail_actions)[0]
-                if action_to_choose in avail_actions_ind:
-                    action_set_execute.append(action_to_choose)
+                if selected_action in avail_actions_ind:
+                    action_set_execute.append(selected_action)
                 elif(avail_actions[0] == 1):
                     action_set_execute.append(0)      #如果该动作不能执行，并且智能体已经死亡，那么就用NO_OP代替当前动作
                 else:
@@ -92,10 +92,10 @@ def run_this(agents_models, n_episode, learn_freq, Num_Exploration, n_agents, ra
 
             step += 1
 
-            if (step == Num_Exploration):
+            if (step == n_exploration_episodes):
                 print("Training starts.")
 
-            if (step > Num_Exploration) and (step % learn_freq == 0):
+            if (step > n_exploration_episodes) and (step % learn_freq == 0):
                 for agent_id in range(n_agents):
                     agents_models[agent_id].learn()
                 training_step += 1
