@@ -13,10 +13,8 @@ from torch import nn
 SC2_PATH = 'D:\Distrib\Kirill\Programs\StarCraft II'
 BATCH_SIZE = 128
 GAMMA = 0.999
-EPS_START = 0.9
-EPS_END = 0.05
-EPS_DECAY = 200
 TARGET_UPDATE = 10
+N_EPISODE = 4000
 
 random.seed(42)
 np.random.seed(42)
@@ -63,13 +61,15 @@ class AgentDQN(nn.Module):
 
 
 class Agent:
-    def __init__(self, n_features: int, n_actions: int, eps_decrease_steps: int, memory_size=500):
+    def __init__(self, n_features: int, n_actions: int, eps_decrease_steps: int, memory_size=500, eps_start=0.9, eps_end=0.05, eps_decay=200):
         self.net = AgentDQN(n_features, n_actions)
         self.n_actions = n_actions
         self.n_features = n_features
-        self.eps_decrease_steps = eps_decrease_steps
         self.memory_size = memory_size
         self.memory = np.zeros((self.memory_size, n_features * 2 + 2))
+        self.eps_start = eps_start
+        self.eps_end = eps_end
+        self.eps_decay = eps_decay
 
     def store_transition(self, s, a, r, s_):
         if not hasattr(self, 'memory_counter'):
@@ -85,7 +85,7 @@ class Agent:
 
     def select_action(self, state, steps_passed):
         sample = random.random()
-        eps_threshold = EPS_END + (EPS_START - EPS_END) * math.exp(-1. * steps_passed / EPS_DECAY)
+        eps_threshold = self.eps_end + (self.eps_start - self.eps_end) * math.exp(-1. * steps_passed / self.eps_decay)
         if sample > eps_threshold:
             with torch.no_grad():
                 # t.max(1) will return largest column value of each row.
@@ -103,13 +103,33 @@ def main():
 
     env = StarCraft2Env(map_name="2m2zFOX", seed=42, reward_only_positive=False,
                         obs_timestep_number=True, reward_scale_rate=200)
+    agents = prepare_agents(env, num_training)
+    n_agents = len(agents)
+
+    for episode in range(N_EPISODE):
+        env.reset()
+        episode_reward_all = 0
+        episode_reward_agent = [0] * n_agents
+        observation_set = []
+        reward_hl_own_old = []
+        reward_hl_en_old = []
+
+        for agent_id in range(n_agents):
+            obs = env.get_obs_agent(agent_id)
+            observation_set.append(obs)
+            reward_hl_own_old.append(env.get_agent_health(agent_id))
+            reward_hl_en_old.append(env.get_enemy_health(agent_id))
+
+
+def prepare_agents(env, num_training):
     env_info = env.get_env_info()
     n_agents = env_info['n_agents']
     agents = []
-    n_actions = env_info["n_actions"]
+    n_actions = env_info['n_actions']
     n_features = env.get_obs_size()
     for i in range(n_agents):
         agents[i] = Agent(n_features, n_actions, num_training)
+    return agents
 
 
 if __name__ == '__main__':
