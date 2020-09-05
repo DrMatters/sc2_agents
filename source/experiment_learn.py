@@ -1,5 +1,5 @@
-import random
 import os
+import random
 from datetime import datetime
 from typing import Type
 
@@ -12,7 +12,7 @@ from source import evaluate, individuals
 POPULATION = 10
 NUM_GENERATIONS = 10
 EVALUATE_TOP = True
-SC2_PATH = 'D:\Prog\SC2_reinforcement_learning\StarCraft II'
+SC2_PATH = 'G:\Programs\StarCraft II'
 
 def main():
     toolbox, evaluator = prepare_env(individuals.AgentwiseQInd)
