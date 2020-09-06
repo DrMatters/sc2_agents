@@ -1,7 +1,13 @@
+import logging
 import math
 import os
 import random
 from typing import List
+
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.INFO,
+    datefmt='%Y-%m-%d %H:%M:%S')
 
 import numpy as np
 import torch
@@ -59,14 +65,11 @@ class Agent:
         self.eps_end = eps_end
         self.eps_decay = eps_decay
         self.batch_size = batch_size
+        self.memory_counter = 0
         self.steps_passed = 0
 
     def store_transition(self, observation_before, action, reward, observation_after):
-        if not hasattr(self, 'memory_counter'):
-            self.memory_counter = 0
-
         transition = np.hstack((observation_before, [action, reward], observation_after))
-
         # replace the old memory with new memory
         index = self.memory_counter % self.memory_size
         self.memory[index, :] = transition
@@ -75,8 +78,8 @@ class Agent:
 
     def select_action(self, state):
         sample = random.random()
-        eps_threshold = \
-            self.eps_end + (self.eps_start - self.eps_end) * math.exp(-1. * self.steps_passed / self.eps_decay)
+        eps_threshold = self.eps_end + (self.eps_start - self.eps_end) * \
+                        math.exp(-1. * self.steps_passed / self.eps_decay)
         self.steps_passed += 1
         if sample > eps_threshold:
             with torch.no_grad():
@@ -89,6 +92,7 @@ class Agent:
 
     def learn(self):
         if self.memory_counter < self.batch_size:
+            logging.info('Less observation memorized than batch size')
             return
 
 
