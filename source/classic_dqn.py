@@ -1,6 +1,7 @@
 import math
 import os
 import random
+from typing import List
 
 import numpy as np
 import torch
@@ -47,7 +48,8 @@ class Agent:
                  memory_size=500,
                  eps_start=0.9,
                  eps_end=0.05,
-                 eps_decay=200):
+                 eps_decay=200,
+                 batch_size=32):
         self.net = AgentDQN(n_features, n_actions)
         self.n_actions = n_actions
         self.n_features = n_features
@@ -56,13 +58,14 @@ class Agent:
         self.eps_start = eps_start
         self.eps_end = eps_end
         self.eps_decay = eps_decay
+        self.batch_size = batch_size
         self.steps_passed = 0
 
-    def store_transition(self, s, a, r, s_):
+    def store_transition(self, observation_before, action, reward, observation_after):
         if not hasattr(self, 'memory_counter'):
             self.memory_counter = 0
 
-        transition = np.hstack((s, [a, r], s_))
+        transition = np.hstack((observation_before, [action, reward], observation_after))
 
         # replace the old memory with new memory
         index = self.memory_counter % self.memory_size
@@ -84,44 +87,50 @@ class Agent:
         else:
             return torch.tensor([[random.randrange(self.n_actions)]], dtype=torch.long)
 
+    def learn(self):
+        if self.memory_counter < self.batch_size:
+            return
+
 
 def main():
     timesteps = 800000
+    learn_freq = 1
     num_exploration = int(timesteps * 0.1)
     num_training = timesteps - num_exploration
 
     env = StarCraft2Env(map_name="2m2zFOX", seed=42, reward_only_positive=False,
                         obs_timestep_number=True, reward_scale_rate=200)
-    agents = prepare_agents(env, num_training)
+    agents: List[Agent] = prepare_agents(env, num_training)
     n_agents = len(agents)
-    n_actions_no_attack = 6
+    step = 0
+    attack_target_action_offset = 6
 
     for episode in range(N_EPISODE):
         env.reset()
         episode_reward_all = 0
         episode_reward_agent = [0] * n_agents
         reward_health_agent_old = [0] * n_agents
-        observation_set = [0] * n_agents
+        observation_before = [0] * n_agents
 
         for agent_id in range(n_agents):
             obs = env.get_obs_agent(agent_id)
-            observation_set[agent_id] = obs
+            observation_before[agent_id] = obs
             reward_health_agent_old[agent_id] = env.get_agent_health(agent_id)
 
         while True:
             # RL choose action based on local observation
             selected_actions = [None] * n_agents
-            actual_actions = [1] * n_agents
+            taken_action = [1] * n_agents
             dead_units = set()
             for agent_id in range(n_agents):
-                selected_action = agents[agent_id].select_action(observation_set[agent_id], )
+                selected_action = agents[agent_id].select_action(observation_before[agent_id])
                 selected_actions[agent_id] = selected_action
                 avail_actions = env.get_avail_agent_actions(agent_id)
                 avail_actions_ind = np.nonzero(avail_actions)[0]
                 if selected_action in avail_actions_ind:
-                    actual_actions[agent_id] = selected_action
+                    taken_action[agent_id] = selected_action
                 elif avail_actions[0] == 1:
-                    actual_actions[agent_id] = 0  # if dead use stub action
+                    taken_action[agent_id] = 0  # if dead use stub action
                 # else: 1 (stop) by default
                 # if not dead use 'stop' by default
 
@@ -129,20 +138,20 @@ def main():
                     dead_units.add(agent_id)
 
             # RL take action and get next observation and reward
-            env_reward, done, _ = env.step(actual_actions)
+            env_reward, done, _ = env.step(taken_action)
             episode_reward_all += env_reward
-            observation_set_next = [0] * n_agents
+            observation_after = [0] * n_agents
             reward_health_agent_new = [0] * n_agents
 
             for agent_id in range(n_agents):
                 obs_next = env.get_obs_agent(agent_id=agent_id)
-                observation_set_next[agent_id] = obs_next
+                observation_after[agent_id] = obs_next
                 reward_health_agent_new[agent_id] = env.get_agent_health(agent_id)
 
             # obtain proper reward of every agent and store it in transition
             for agent_id in range(n_agents):
-                if actual_actions[agent_id] > 5:
-                    # target_id = actual_actions[agent_id] - n_actions_no_attack
+                if taken_action[agent_id] > 5:
+                    # target_id = taken_action[agent_id] - attack_target_action_offset
                     # health_reduce_en = reward_hl_en_old[target_id] - reward_hl_en_new[target_id]
                     # if (health_reduce_en > 0):
                     if env_reward > 0:
@@ -152,23 +161,53 @@ def main():
                     # else:
                     #     reward = 1
                 else:
-                    reward = (reward_health_agent_new[agent_id] - reward_health_agent_old[agent_id]) * 5
+                    reward = (reward_health_agent_new[agent_id] -
+                              reward_health_agent_old[agent_id]) * 5
 
                 if agent_id in dead_units:
                     reward = 0
 
                 episode_reward_agent[agent_id] += reward
 
-                if (action_set_execute[agent_id] == action_set_actual[
-                    agent_id]):  # 只有当计算出的动作与所采取的动作一样的时候，才保存下来该transition
-                    agents_models[agent_id].store_transition(observation_set[agent_id], action_set_actual[agent_id],
-                                                             reward, observation_set_next[agent_id])
+                if taken_action[agent_id] == selected_actions[agent_id]:
+                    # Save the transition only when the calculated action is the
+                    # same as the action taken
+                    agents[agent_id].store_transition(
+                        observation_before[agent_id],
+                        selected_actions[agent_id],
+                        reward,
+                        observation_after[agent_id]
+                    )
+
+                # swap observation (not needed, as observation is
+                # received from environment)
+                # observation_before = observation_after
+                # reward_health_agent_old = reward_health_agent_new
+                # reward_hl_en_old = reward_hl_en_new
+
+                # break while loop when end of this episode
+                if done:
+                    # for i in range(n_agents):
+                    #     agents[i].get_episode_reward(episode_reward_agent[i], episode_reward_all, episode)
+                    print(
+                        f"steps until now : %s, episode: %s， episode reward: %s" % (step, episode, episode_reward_all))
+                    break
+
+                step += 1
+
+                if step == num_exploration:
+                    print("Exploration finished")
+
+                if (step > num_exploration) and (step % learn_freq == 0):
+                    for agent_id in range(n_agents):
+                        agents[agent_id].learn()
+                    training_step += 1
 
 
 def prepare_agents(env, num_training):
     env_info = env.get_env_info()
     n_agents = env_info['n_agents']
-    agents = []
+    agents: List[Agent] = []
     n_actions = env_info['n_actions']
     n_features = env.get_obs_size()
     for i in range(n_agents):
