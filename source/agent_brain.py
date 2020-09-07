@@ -1,5 +1,7 @@
 import logging
 import math
+import copy
+import collections
 import random
 
 import numpy as np
@@ -43,11 +45,13 @@ class Agent:
                  max_epsilon=1.,
                  min_epsilon=0.,
                  batch_size=32):
-        self.net = AgentDQN(n_features, n_actions)
+        self.model = AgentDQN(n_features, n_actions)
+        self.target_model = copy.deepcopy(self.model)
         self.n_features = n_features
         self.n_actions = n_actions
         self.num_training = num_training
         self.memory_size = memory_size
+        self.memory = collections.deque()
         self.memory = np.zeros((self.memory_size, n_features * 2 + 2))
         self.eps_start = eps_start
         self.eps_end = eps_end
@@ -59,6 +63,7 @@ class Agent:
         self.max_epsilon = max_epsilon
         self.min_epsilon = min_epsilon
         self.epsilon = self.max_epsilon
+        self.learn_step_counter = 0
 
     def store_transition(self, observation_before, action, reward, observation_after):
         transition = np.hstack((observation_before, [action, reward], observation_after))
@@ -77,7 +82,7 @@ class Agent:
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                response = self.net(state)
+                response = self.model(state)
                 # argmax
                 return response.max(0)[1].view(1, 1)
         else:
@@ -90,7 +95,10 @@ class Agent:
         if self.learn_step_counter % self.replace_target_iter == 0:
             pass
 
-        if self.epsilon > self.min_epsilon:
-            self.epsilon -= self.max_epsilon / self.num_training
-        else:
-            self.epsilon = self.min_epsilon
+        self.learn_step_counter += 1
+
+        # update epsilon (exploration probability)
+        eps_delta = (self.max_epsilon - self.min_epsilon) / self.num_training
+        eps = max(self.max_epsilon - eps_delta * self.learn_step_counter,
+                  self.min_epsilon)
+        self.epsilon = eps
