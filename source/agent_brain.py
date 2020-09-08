@@ -40,6 +40,7 @@ class Agent:
                  eps_end=0.05,
                  update_target_every=2,
                  batch_size=32):
+        self.n_features = n_features
         self.n_actions = n_actions
         self.eps_decay_steps = eps_decay_steps
         self.memory_size = memory_size
@@ -91,6 +92,16 @@ class Agent:
         else:
             sample_index = np.random.choice(self.memory_counter, size=self.batch_size)
         batch_memory = self.memory[sample_index, :]
+        # batch contains: idx, (observation_before, [action, reward], observation_after)
+        current_states = batch_memory[:, :self.n_features]
+        current_qs_list = self.model(current_states)
+
+        future_states = batch_memory[:, -self.n_features:]
+        future_qs_list = self.target_model(future_states)
+
+
+
+
 
 
         self.learn_step_counter += 1
