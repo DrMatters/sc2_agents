@@ -29,11 +29,11 @@ def main():
     timesteps = 800000
     learn_freq = 1
     num_exploration = int(timesteps * 0.1)
-    num_training = timesteps - num_exploration
+    eps_decay_steps = timesteps - num_exploration
 
     env = StarCraft2Env(map_name="2m2zFOX", seed=42, reward_only_positive=False,
                         obs_timestep_number=True, reward_scale_rate=200)
-    agents: List[Agent] = prepare_agents(env, num_training)
+    agents: List[Agent] = prepare_agents(env, eps_decay_steps)
     n_agents = len(agents)
     step = 0
     attack_target_action_offset = 6
@@ -119,8 +119,9 @@ def main():
                 if done:
                     # for i in range(n_agents):
                     #     agents[i].get_episode_reward(episode_reward_agent[i], episode_reward_all, episode)
-                    print(
-                        f"steps until now : %s, episode: %s， episode reward: %s" % (step, episode, episode_reward_all))
+                    print(f"steps until now : {step},"
+                          f" episode: {episode},"
+                          f" episode reward: {episode_reward_all}")
                     break
 
                 step += 1
@@ -134,14 +135,14 @@ def main():
                     training_step += 1
 
 
-def prepare_agents(env: StarCraft2Env, num_training):
+def prepare_agents(env: StarCraft2Env, eps_decay_steps):
     env_info = env.get_env_info()
     n_agents = env_info['n_agents']
     agents: List[Agent] = []
     n_actions = env_info['n_actions']
     n_features = env.get_obs_size()
     for i in range(n_agents):
-        agents.append(Agent(n_features, n_actions, num_training))
+        agents.append(Agent(n_features, n_actions, eps_decay_steps))
     return agents
 
 

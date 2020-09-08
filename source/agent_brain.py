@@ -1,7 +1,5 @@
-import logging
-import math
 import copy
-import collections
+import logging
 import random
 
 import numpy as np
@@ -35,35 +33,26 @@ class Agent:
     def __init__(self,
                  n_features: int,
                  n_actions: int,
-                 num_training: int,  # number of calls of 'learn' to
-                                     # decrease epsilon to zero
-                 memory_size=500,
+                 eps_decay_steps: int,  # number of calls of 'learn' to
+                 # decrease epsilon to zero
+                 memory_size=50_000,
                  eps_start=0.9,
                  eps_end=0.05,
-                 eps_decay=200,
-                 replace_target_iter=300,
-                 max_epsilon=1.,
-                 min_epsilon=0.,
+                 update_target_every=2,
                  batch_size=32):
-        self.model = AgentDQN(n_features, n_actions)
-        self.target_model = copy.deepcopy(self.model)
-        self.n_features = n_features
         self.n_actions = n_actions
-        self.num_training = num_training
+        self.eps_decay_steps = eps_decay_steps
         self.memory_size = memory_size
-        self.memory = collections.deque()
         self.memory = np.zeros((self.memory_size, n_features * 2 + 2))
+        self.replace_target_after = 300
+        self.batch_size = batch_size
         self.eps_start = eps_start
         self.eps_end = eps_end
-        self.eps_decay = eps_decay
-        self.replace_target_iter = 300
-        self.batch_size = batch_size
+        self.epsilon = self.eps_start
         self.memory_counter = 0
-        self.steps_passed = 0
-        self.max_epsilon = max_epsilon
-        self.min_epsilon = min_epsilon
-        self.epsilon = self.max_epsilon
         self.learn_step_counter = 0
+        self.model = AgentDQN(n_features, n_actions)
+        self.target_model = copy.deepcopy(self.model)
 
     def store_transition(self, observation_before, action, reward, observation_after):
         transition = np.hstack((observation_before, [action, reward], observation_after))
@@ -75,7 +64,7 @@ class Agent:
 
     def select_action(self, state):
         # sample = random.random()
-        sample = 0.99  # for debug reasons
+        sample = 0.99  # for debug reasons TODO: replace with proper
         if sample > self.epsilon:
             with torch.no_grad():
                 state = torch.Tensor(state)
@@ -90,15 +79,24 @@ class Agent:
 
     def learn(self):
         if self.memory_counter < self.batch_size:
-            logging.info('Less observation memorized than batch size')
+            logging.info("There's less observations recorded than batch size")
             return
-        if self.learn_step_counter % self.replace_target_iter == 0:
-            pass
+
+        if self.learn_step_counter % self.replace_target_after == 0:
+            self.target_model.set_weights(self.model.get_weights())
+
+            # sample batch memory from all memory
+        if self.memory_counter > self.memory_size:
+            sample_index = np.random.choice(self.memory_size, size=self.batch_size)
+        else:
+            sample_index = np.random.choice(self.memory_counter, size=self.batch_size)
+        batch_memory = self.memory[sample_index, :]
+
 
         self.learn_step_counter += 1
 
         # update epsilon (exploration probability)
-        eps_delta = (self.max_epsilon - self.min_epsilon) / self.num_training
-        eps = max(self.max_epsilon - eps_delta * self.learn_step_counter,
-                  self.min_epsilon)
+        eps_delta = (self.eps_start - self.eps_end) / self.eps_decay_steps
+        eps = max(self.eps_start - eps_delta * self.learn_step_counter,
+                  self.eps_end)
         self.epsilon = eps
