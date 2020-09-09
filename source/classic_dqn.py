@@ -27,9 +27,10 @@ os.environ['SC2PATH'] = SC2_PATH
 
 
 def main():
-    timesteps = 800000
+    # timesteps = 800000
+    timesteps = 500 # TODO: replace with original
     learn_freq = 1
-    num_exploration = int(timesteps * 0.1)
+    num_exploration = int(timesteps / 10)
     eps_decay_steps = timesteps - num_exploration
 
     env = StarCraft2Env(map_name="2m2zFOX", seed=42, reward_only_positive=False,
@@ -129,9 +130,9 @@ def main():
             step += 1
 
             if step == num_exploration:
-                print("Exploration finished")
+                logging.info("Exploration finished")
 
-            if (step > num_exploration) and (step % learn_freq == 0):
+            if (step >= num_exploration) and (step % learn_freq == 0):
                 for agent_id_1 in range(n_agents):
                     agents[agent_id_1].learn()
                 training_step += 1

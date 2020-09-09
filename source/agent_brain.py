@@ -74,9 +74,10 @@ class Agent:
                 # found, so we pick action with the larger expected reward.
                 response = self.model(state)
                 # argmax
-                return response.max(0)[1].view(1, 1)
+                result = response.max(0)[1].view(1, 1)
         else:
-            return torch.tensor([[random.randrange(self.n_actions)]], dtype=torch.long)
+            result = torch.tensor([[random.randrange(self.n_actions)]], dtype=torch.long)
+            return result.cpu().item()
 
     def learn(self):
         if self.memory_counter < self.batch_size:
@@ -98,8 +99,6 @@ class Agent:
 
         future_states = batch_memory[:, -self.n_features:]
         future_qs_list = self.target_model(future_states)
-
-
 
 
 
