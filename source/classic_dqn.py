@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import pathlib
 import random
 from typing import List
 
@@ -24,9 +25,8 @@ logging.basicConfig(
 
 MODEL_NAME = 'basic_inp_avg_out'
 SC2_PATH = '/Applications/StarCraft II'
-TB_PATH = './results/tensorboard/'
-SAVE_PATH = './results/save/'
-SAVE_FREQ = 10
+RESULT_PATH_BASE = './results/'
+SAVE_FREQ = 100
 
 BATCH_SIZE = 128
 GAMMA = 0.999
@@ -35,13 +35,23 @@ N_EPISODE = 4000
 
 os.environ['SC2PATH'] = SC2_PATH
 
-if TB_PATH:
-    tb_writer = tensorboardX.SummaryWriter(TB_PATH)
-else:
-    tb_writer = None
-
 
 def main():
+    if RESULT_PATH_BASE:
+        launch_time = datetime.datetime.now()
+        save_path_base = pathlib.Path(RESULT_PATH_BASE)
+        save_path_base = save_path_base / f'{MODEL_NAME}' \
+                                          f'_d{launch_time:%Y_%m_%d}' \
+                                          f'_t{launch_time:%H_%M_%S}'
+    else:
+        save_path_base = None
+
+    if save_path_base:
+        tb_path = save_path_base / 'tensorboard'
+        tb_writer = tensorboardX.SummaryWriter(str(tb_path.resolve()))
+    else:
+        tb_writer = None
+
     # timesteps = 800000
     timesteps = 100000  # place a proper number here
     learn_freq = 1
@@ -150,13 +160,16 @@ def main():
                             f'agent_no_{agent_id}/episode_reward',
                             episode_reward_agent[agent_id], episode
                         )
-                if SAVE_PATH:
+                if save_path_base and episode % SAVE_FREQ == SAVE_FREQ - 1:
                     now = datetime.datetime.now()
+                    base_model_path = save_path_base / 'models'
+                    base_model_path.mkdir(parents=True, exist_ok=True)
                     for agent_id in range(n_agents):
-                        model_path = SAVE_PATH + f'{MODEL_NAME}' \
-                                                 f'_d{now:%Y_%m_%d}' \
-                                                 f'_t{now:%H_%M_%S}' \
-                                                 f'_agent_no_{agent_id}.torch'
+                        model_path = base_model_path / f'd{now:%Y_%m_%d}' \
+                                                       f'_t{now:%H_%M_%S}' \
+                                                       f'_ep{episode}' \
+                                                       f'_agent_no_{agent_id}' \
+                                                       f'.torch'
                         logging.info(f'saving model {model_path}')
                         torch.save(agents[agent_id], model_path)
                 break
