@@ -1,6 +1,7 @@
-import copy
 import logging
 import random
+import tensorboardX
+from typing import Optional
 
 import numpy as np
 import torch
@@ -32,7 +33,10 @@ class AgentDQN(nn.Module):
 
 
 class Agent:
+    tb_writer: Optional[tensorboardX.SummaryWriter]
+
     def __init__(self,
+                 agent_id: int,
                  n_features: int,
                  n_actions: int,
                  eps_decay_steps: int,  # number of calls of 'learn' to
@@ -42,7 +46,8 @@ class Agent:
                  eps_end=0.05,
                  update_target_every=2,
                  batch_size=10,
-                 discount=0.9):
+                 discount=0.9,
+                 tb_writer=None):
         self.n_features = n_features
         self.n_actions = n_actions
         self.eps_decay_steps = eps_decay_steps
@@ -57,10 +62,14 @@ class Agent:
         self.memory_counter = 0
         self.learn_step_counter = 0
         self.model = AgentDQN(n_features, n_actions)
-        self.target_model = AgentDQN(n_features)
+        self.target_model = AgentDQN(n_features, n_actions)
         self.target_model.load_state_dict(self.model.state_dict())
         self.criterion = nn.MSELoss()
-        self.optimizer = optim.Adam()
+        self.optimizer = optim.Adam(self.model.parameters())
+        self.tb_writer = tb_writer
+
+        self.tb_prefix = f'agent_no_{agent_id}/'
+        self.cost_history = []
 
     def store_transition(self, observation_before, action, reward, done, observation_after):
         transition = np.hstack((observation_before, [action, reward, done], observation_after))
@@ -70,7 +79,9 @@ class Agent:
 
         self.memory_counter += 1
 
-    def select_action(self, state):
+    def select_action(self, state, episode):
+        if self.tb_writer:
+            self.tb_writer.add_scalar(f'{self.tb_prefix}epsilon', self.epsilon, episode)
         sample = random.random()
         # sample = 0.99  # for debug reasons TODO: replace with proper
         if sample > self.epsilon:
@@ -86,7 +97,7 @@ class Agent:
             result = torch.tensor([[random.randrange(self.n_actions)]], dtype=torch.long)
         return result.cpu().item()
 
-    def learn(self):
+    def learn(self, episode):
         if self.memory_counter < self.batch_size:
             logging.info("There's less observations recorded than batch size")
             return
@@ -114,17 +125,30 @@ class Agent:
         qs_target = current_qs.detach().clone()
         reward = batch_memory[:, self.n_features + 1]
 
-        actions_ind = batch_memory[:, self.n_features].astype(int)
+        done = batch_memory[:, self.n_features + 2]
         expect_future_q = self.discount * torch.max(future_qs, dim=1)[0]
-        qs_target[:, actions_ind] = \
-            torch.from_numpy(reward).type(torch.FloatTensor) + expect_future_q
+        expect_future_q = expect_future_q.detach().cpu().numpy() * (1 - done)
 
+        updated_reward = torch.from_numpy(reward + expect_future_q)
+        actions_ind = batch_memory[:, self.n_features].astype(int)
+        qs_target[:, actions_ind] = updated_reward.type(torch.FloatTensor)
 
+        self.optimizer.zero_grad()
+        outputs = self.model(current_states)
+        loss = self.criterion(outputs, qs_target)
+        loss.backward()
+        self.optimizer.step()
 
+        self.cost_history.append(loss.cpu().item())
         self.learn_step_counter += 1
 
-        # update epsilon (exploration probability)
+        # todo: tensorboard plot
+        # todo: save model
+        if self.tb_writer:
+            self.tb_writer.add_scalar(f'{self.tb_prefix}loss',
+                                      loss.item(), episode)
+
+        # update epsilon (exploration (random move) probability)
         eps_delta = (self.eps_start - self.eps_end) / self.eps_decay_steps
-        eps = max(self.eps_start - eps_delta * self.learn_step_counter,
-                  self.eps_end)
-        self.epsilon = eps
+        self.epsilon = max(self.eps_start - eps_delta * self.learn_step_counter,
+                           self.eps_end)

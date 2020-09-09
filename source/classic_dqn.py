@@ -2,6 +2,7 @@ import logging
 import os
 import random
 from typing import List
+import tensorboardX
 
 from .agent_brain import Agent
 
@@ -16,6 +17,7 @@ from smac.env import StarCraft2Env
 # %%
 
 SC2_PATH = '/Applications/StarCraft II'
+TB_PATH = './results/tensorboard/'
 BATCH_SIZE = 128
 GAMMA = 0.999
 TARGET_UPDATE = 10
@@ -25,6 +27,10 @@ random.seed(42)
 np.random.seed(42)
 os.environ['SC2PATH'] = SC2_PATH
 
+if TB_PATH:
+    tb_writer = tensorboardX.SummaryWriter(TB_PATH)
+else:
+    tb_writer = None
 
 def main():
     # timesteps = 800000
@@ -59,7 +65,8 @@ def main():
             taken_actions = [1] * n_agents
             dead_units = set()
             for agent_id in range(n_agents):
-                selected_action = agents[agent_id].select_action(observation_before[agent_id])
+                selected_action = agents[agent_id].select_action(
+                    observation_before[agent_id], episode)
                 selected_actions[agent_id] = selected_action
                 avail_actions = env.get_avail_agent_actions(agent_id)
                 avail_actions_ind = np.nonzero(avail_actions)[0]
@@ -123,6 +130,7 @@ def main():
             if done:
                 # for i in range(n_agents):
                 #     agents[i].get_episode_reward(episode_reward_agent[i], episode_reward_all, episode)
+
                 logging.info(f"steps until now : {step},"
                              f" episode: {episode},"
                              f" episode reward: {episode_reward_all}")
@@ -135,8 +143,7 @@ def main():
 
             if (step >= num_exploration) and (step % learn_freq == 0):
                 for agent_id_1 in range(n_agents):
-                    agents[agent_id_1].learn()
-                # training_step += 1
+                    agents[agent_id_1].learn(episode)
 
 
 def prepare_agents(env: StarCraft2Env, eps_decay_steps):
@@ -146,7 +153,7 @@ def prepare_agents(env: StarCraft2Env, eps_decay_steps):
     n_actions = env_info['n_actions']
     n_features = env.get_obs_size()
     for i in range(n_agents):
-        agents.append(Agent(n_features, n_actions, eps_decay_steps))
+        agents.append(Agent(i, n_features, n_actions, eps_decay_steps))
     return agents
 
 
