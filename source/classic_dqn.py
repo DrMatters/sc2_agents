@@ -28,7 +28,7 @@ os.environ['SC2PATH'] = SC2_PATH
 
 def main():
     # timesteps = 800000
-    timesteps = 500 # TODO: replace with original
+    timesteps = 1000 # TODO: replace with original
     learn_freq = 1
     num_exploration = int(timesteps / 10)
     eps_decay_steps = timesteps - num_exploration
@@ -109,6 +109,7 @@ def main():
                         observation_before[agent_id],
                         selected_actions[agent_id],
                         reward,
+                        done,
                         observation_after[agent_id]
                     )
 
@@ -135,7 +136,7 @@ def main():
             if (step >= num_exploration) and (step % learn_freq == 0):
                 for agent_id_1 in range(n_agents):
                     agents[agent_id_1].learn()
-                training_step += 1
+                # training_step += 1
 
 
 def prepare_agents(env: StarCraft2Env, eps_decay_steps):

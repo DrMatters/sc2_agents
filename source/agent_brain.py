@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
+from torch import optim
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -23,7 +24,8 @@ class AgentDQN(nn.Module):
         self.layer_2 = nn.Linear(hidden_layer_nodes, n_actions)
 
     def forward(self, x):
-        x = F.relu(self.layer_1(x))
+        x = self.layer_1(x)
+        x = F.relu(x)
         x = self.dropout(x)
         out = self.layer_2(x)
         return out
@@ -39,24 +41,29 @@ class Agent:
                  eps_start=0.9,
                  eps_end=0.05,
                  update_target_every=2,
-                 batch_size=32):
+                 batch_size=10,
+                 discount=0.9):
         self.n_features = n_features
         self.n_actions = n_actions
         self.eps_decay_steps = eps_decay_steps
         self.memory_size = memory_size
-        self.memory = np.zeros((self.memory_size, n_features * 2 + 2))
+        self.memory = np.zeros((self.memory_size, n_features * 2 + 3))
         self.replace_target_after = 300
         self.batch_size = batch_size
+        self.discount = discount
         self.eps_start = eps_start
         self.eps_end = eps_end
         self.epsilon = self.eps_start
         self.memory_counter = 0
         self.learn_step_counter = 0
         self.model = AgentDQN(n_features, n_actions)
-        self.target_model = copy.deepcopy(self.model)
+        self.target_model = AgentDQN(n_features)
+        self.target_model.load_state_dict(self.model.state_dict())
+        self.criterion = nn.MSELoss()
+        self.optimizer = optim.Adam()
 
-    def store_transition(self, observation_before, action, reward, observation_after):
-        transition = np.hstack((observation_before, [action, reward], observation_after))
+    def store_transition(self, observation_before, action, reward, done, observation_after):
+        transition = np.hstack((observation_before, [action, reward, done], observation_after))
         # replace the old memory with new memory
         index = self.memory_counter % self.memory_size
         self.memory[index, :] = transition
@@ -64,8 +71,8 @@ class Agent:
         self.memory_counter += 1
 
     def select_action(self, state):
-        # sample = random.random()
-        sample = 0.99  # for debug reasons TODO: replace with proper
+        sample = random.random()
+        # sample = 0.99  # for debug reasons TODO: replace with proper
         if sample > self.epsilon:
             with torch.no_grad():
                 state = torch.Tensor(state)
@@ -77,15 +84,15 @@ class Agent:
                 result = response.max(0)[1].view(1, 1)
         else:
             result = torch.tensor([[random.randrange(self.n_actions)]], dtype=torch.long)
-            return result.cpu().item()
+        return result.cpu().item()
 
     def learn(self):
         if self.memory_counter < self.batch_size:
             logging.info("There's less observations recorded than batch size")
             return
 
-        if self.learn_step_counter % self.replace_target_after == 0:
-            self.target_model.set_weights(self.model.get_weights())
+        if self.learn_step_counter % self.replace_target_after == self.replace_target_after - 1:
+            self.target_model.load_state_dict(self.model.state_dict())
 
             # sample batch memory from all memory
         if self.memory_counter > self.memory_size:
@@ -93,13 +100,24 @@ class Agent:
         else:
             sample_index = np.random.choice(self.memory_counter, size=self.batch_size)
         batch_memory = self.memory[sample_index, :]
-        # batch contains: idx, (observation_before, [action, reward], observation_after)
-        current_states = batch_memory[:, :self.n_features]
-        current_qs_list = self.model(current_states)
 
-        future_states = batch_memory[:, -self.n_features:]
-        future_qs_list = self.target_model(future_states)
+        # Get current states from minibatch, then query NN model for Q values
+        # batch contains: idx, (observation_before, [action, reward, done], observation_after)
+        current_states = torch.from_numpy(batch_memory[:, :self.n_features]).type(torch.FloatTensor)
+        current_qs = self.model(current_states)
 
+        # Get future states from minibatch, then query NN model for Q values
+        # When using target network, query it, otherwise main network should be queried
+        future_states = torch.from_numpy(batch_memory[:, -self.n_features:]).type(torch.FloatTensor)
+        future_qs = self.target_model(future_states)
+
+        qs_target = current_qs.detach().clone()
+        reward = batch_memory[:, self.n_features + 1]
+
+        actions_ind = batch_memory[:, self.n_features].astype(int)
+        expect_future_q = self.discount * torch.max(future_qs, dim=1)[0]
+        qs_target[:, actions_ind] = \
+            torch.from_numpy(reward).type(torch.FloatTensor) + expect_future_q
 
 
 
