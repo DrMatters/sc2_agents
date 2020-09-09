@@ -1,8 +1,9 @@
 import logging
 import os
 import random
-from .agent_brain import Agent
 from typing import List
+
+from .agent_brain import Agent
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -36,9 +37,10 @@ def main():
     agents: List[Agent] = prepare_agents(env, eps_decay_steps)
     n_agents = len(agents)
     step = 0
-    attack_target_action_offset = 6
+    # attack_target_action_offset = 6
 
     for episode in range(N_EPISODE):
+        logging.info(f'Episode {episode} has started')
         env.reset()
         episode_reward_all = 0
         episode_reward_agent = [0] * n_agents
@@ -109,30 +111,30 @@ def main():
                         observation_after[agent_id]
                     )
 
-                # swap observation (not needed, as observation is
-                # received from environment)
-                # observation_before = observation_after
-                # agent_health_before = agent_health_after
-                # reward_hl_en_old = reward_hl_en_new
+            # swap observation (not needed, as observation is
+            # received from environment)
+            # observation_before = observation_after
+            # agent_health_before = agent_health_after
+            # reward_hl_en_old = reward_hl_en_new
 
-                # break while loop when end of this episode
-                if done:
-                    # for i in range(n_agents):
-                    #     agents[i].get_episode_reward(episode_reward_agent[i], episode_reward_all, episode)
-                    print(f"steps until now : {step},"
-                          f" episode: {episode},"
-                          f" episode reward: {episode_reward_all}")
-                    break
+            # break while loop when end of this episode
+            if done:
+                # for i in range(n_agents):
+                #     agents[i].get_episode_reward(episode_reward_agent[i], episode_reward_all, episode)
+                logging.info(f"steps until now : {step},"
+                             f" episode: {episode},"
+                             f" episode reward: {episode_reward_all}")
+                break
 
-                step += 1
+            step += 1
 
-                if step == num_exploration:
-                    print("Exploration finished")
+            if step == num_exploration:
+                print("Exploration finished")
 
-                if (step > num_exploration) and (step % learn_freq == 0):
-                    for agent_id in range(n_agents):
-                        agents[agent_id].learn()
-                    training_step += 1
+            if (step > num_exploration) and (step % learn_freq == 0):
+                for agent_id_1 in range(n_agents):
+                    agents[agent_id_1].learn()
+                training_step += 1
 
 
 def prepare_agents(env: StarCraft2Env, eps_decay_steps):
