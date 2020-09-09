@@ -47,6 +47,7 @@ def main():
     timesteps = 100000  # place a proper number here
     learn_freq = 1
     num_exploration = int(timesteps / 10)
+    SAVE_FREQ = min(100, timesteps // 20)
     eps_decay_steps = timesteps - num_exploration
 
     env = StarCraft2Env(map_name="2m2zFOX", seed=42, reward_only_positive=False,
