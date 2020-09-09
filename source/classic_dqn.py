@@ -1,30 +1,38 @@
+import datetime
 import logging
 import os
 import random
 from typing import List
+
+import numpy as np
 import tensorboardX
+import torch
+from smac.env import StarCraft2Env
 
 from .agent_brain import Agent
+
+random.seed(42)
+np.random.seed(42)
+torch.manual_seed(42)
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
     level=logging.INFO,
     datefmt='%Y-%m-%d %H:%M:%S')
 
-import numpy as np
-from smac.env import StarCraft2Env
-
 # %%
 
+MODEL_NAME = 'basic_inp_avg_out'
 SC2_PATH = '/Applications/StarCraft II'
 TB_PATH = './results/tensorboard/'
+SAVE_PATH = './results/save/'
+SAVE_FREQ = 10
+
 BATCH_SIZE = 128
 GAMMA = 0.999
 TARGET_UPDATE = 10
 N_EPISODE = 4000
 
-random.seed(42)
-np.random.seed(42)
 os.environ['SC2PATH'] = SC2_PATH
 
 if TB_PATH:
@@ -32,9 +40,10 @@ if TB_PATH:
 else:
     tb_writer = None
 
+
 def main():
     # timesteps = 800000
-    timesteps = 100000 # place a proper number here
+    timesteps = 100000  # place a proper number here
     learn_freq = 1
     num_exploration = int(timesteps / 10)
     eps_decay_steps = timesteps - num_exploration
@@ -141,6 +150,15 @@ def main():
                             f'agent_no_{agent_id}/episode_reward',
                             episode_reward_agent[agent_id], episode
                         )
+                if SAVE_PATH:
+                    now = datetime.datetime.now()
+                    for agent_id in range(n_agents):
+                        model_path = SAVE_PATH + f'{MODEL_NAME}' \
+                                                 f'_d{now:%Y_%m_%d}' \
+                                                 f'_t{now:%H_%M_%S}' \
+                                                 f'_agent_no_{agent_id}.torch'
+                        logging.info(f'saving model {model_path}')
+                        torch.save(agents[agent_id], model_path)
                 break
 
             step += 1
