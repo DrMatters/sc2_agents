@@ -122,9 +122,11 @@ class Agent:
         future_states = torch.from_numpy(batch_memory[:, -self.n_features:]).type(torch.FloatTensor)
         future_qs = self.target_model(future_states)
 
+        # calculate target qs
         qs_target = current_qs.detach().clone()
         reward = batch_memory[:, self.n_features + 1]
 
+        # expected future qs are added to reward
         done = batch_memory[:, self.n_features + 2]
         expect_future_q = self.discount * torch.max(future_qs, dim=1)[0]
         expect_future_q = expect_future_q.detach().cpu().numpy() * (1 - done)
@@ -133,6 +135,7 @@ class Agent:
         actions_ind = batch_memory[:, self.n_features].astype(int)
         qs_target[:, actions_ind] = updated_reward.type(torch.FloatTensor)
 
+        # model & optimizer step
         self.optimizer.zero_grad()
         outputs = self.model(current_states)
         loss = self.criterion(outputs, qs_target)
@@ -142,11 +145,10 @@ class Agent:
         self.cost_history.append(loss.cpu().item())
         self.learn_step_counter += 1
 
-        # todo: tensorboard plot
-        # todo: save model
         if self.tb_writer:
             self.tb_writer.add_scalar(f'{self.tb_prefix}loss',
                                       loss.item(), episode)
+        # todo: save model
 
         # update epsilon (exploration (random move) probability)
         eps_delta = (self.eps_start - self.eps_end) / self.eps_decay_steps

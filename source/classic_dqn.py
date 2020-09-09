@@ -34,7 +34,7 @@ else:
 
 def main():
     # timesteps = 800000
-    timesteps = 1000 # TODO: replace with original
+    timesteps = 100000 # place a proper number here
     learn_freq = 1
     num_exploration = int(timesteps / 10)
     eps_decay_steps = timesteps - num_exploration
@@ -134,6 +134,13 @@ def main():
                 logging.info(f"steps until now : {step},"
                              f" episode: {episode},"
                              f" episode reward: {episode_reward_all}")
+                if tb_writer:
+                    tb_writer.add_scalar('episode_reward_all', episode_reward_all, episode)
+                    for agent_id in range(n_agents):
+                        tb_writer.add_scalar(
+                            f'agent_no_{agent_id}/episode_reward',
+                            episode_reward_agent[agent_id], episode
+                        )
                 break
 
             step += 1
@@ -142,8 +149,8 @@ def main():
                 logging.info("Exploration finished")
 
             if (step >= num_exploration) and (step % learn_freq == 0):
-                for agent_id_1 in range(n_agents):
-                    agents[agent_id_1].learn(episode)
+                for agent_id in range(n_agents):
+                    agents[agent_id].learn(episode)
 
 
 def prepare_agents(env: StarCraft2Env, eps_decay_steps):
