@@ -32,8 +32,6 @@ BATCH_SIZE = 128
 GAMMA = 0.999
 TARGET_UPDATE = 10
 N_EPISODE = 200
-# timesteps = 800000
-TIMESTEPS = 100000  # place a proper number here
 LEARN_FREQ = 1  # on steps
 
 os.environ['SC2PATH'] = SC2_PATH
@@ -41,7 +39,7 @@ os.environ['SC2PATH'] = SC2_PATH
 
 def main():
 
-    save_freq, agents, env, num_exploration, num_exploration_eps, save_path_base, tb_writer = \
+    save_freq, agents, env, num_exploration_eps, save_path_base, tb_writer = \
         prepare_env_and_agents()
     n_agents = len(agents)
     step = 0
@@ -140,7 +138,7 @@ def main():
 
         # save model
         if save_path_base and episode % save_freq == save_freq - 1:
-            save_models(agents, episode, num_exploration, save_path_base, start_training)
+            save_models(agents, episode, save_path_base, start_training)
 
 
 def prepare_env_and_agents():
@@ -155,10 +153,8 @@ def prepare_env_and_agents():
     tb_writer = tensorboardX.SummaryWriter(str(tb_path.resolve()))
 
     # calculate eps decay and num exploration from N_EPISODE
-    num_exploration = TIMESTEPS // 10
     num_exploration_ep = int(N_EPISODE * .15)
     save_freq = min(20, N_EPISODE // 20)
-    eps_decay_steps = TIMESTEPS - num_exploration
     eps_decay_eps = N_EPISODE - num_exploration_ep
 
     # prepare env
@@ -166,7 +162,7 @@ def prepare_env_and_agents():
                         obs_timestep_number=True, reward_scale_rate=200)
     # prepare agents
     agents: List[Agent] = prepare_agents(env, eps_decay_eps, tb_writer)
-    return save_freq, agents, env, num_exploration, num_exploration_ep, save_path_base, tb_writer
+    return save_freq, agents, env, num_exploration_ep, save_path_base, tb_writer
 
 
 def calculate_reward(agent_health_after, agent_health_before, agent_id, dead_units, env_reward, taken_actions):
@@ -201,7 +197,7 @@ def report_logs(episode, episode_reward_all, step):
                  f"episode reward: {episode_reward_all}")
 
 
-def save_models(agents, episode, num_exploration, save_path_base, start_training):
+def save_models(agents, episode, save_path_base, start_training):
     now = datetime.datetime.now()
     base_model_path = save_path_base / 'models'
     base_model_path.mkdir(parents=True, exist_ok=True)
