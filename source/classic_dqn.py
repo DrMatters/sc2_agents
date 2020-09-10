@@ -52,8 +52,8 @@ def main():
         env.reset()
 
         # reset data
-        episode_reward_all = 0
-        episode_reward_agent = [0] * n_agents
+        episode_reward = 0
+        agents_episode_reward = [0] * n_agents
         agent_health_before = [0] * n_agents
         observation_before = [0] * n_agents
 
@@ -85,7 +85,7 @@ def main():
 
             # RL take action and get next observation and reward
             env_reward, done, _ = env.step(taken_actions)
-            episode_reward_all += env_reward
+            episode_reward += env_reward
             observation_after = [0] * n_agents
             agent_health_after = [0] * n_agents
 
@@ -101,7 +101,7 @@ def main():
                     dead_units, env_reward, taken_actions
                 )
 
-                episode_reward_agent[agent_id] += reward
+                agents_episode_reward[agent_id] += reward
 
                 if taken_actions[agent_id] == selected_actions[agent_id]:
                     # Save the transition only when the calculated action is the
@@ -129,12 +129,12 @@ def main():
             logging.info("Exploration finished!")
 
         # report to tensorboard
-        report_tensorboard(episode, episode_reward_agent,
-                           episode_reward_all, n_agents, tb_writer)
+        report_tensorboard(episode, agents_episode_reward,
+                           episode_reward, n_agents, tb_writer)
 
         # print logging info
         if episode % LOGGING_FREQ == LOGGING_FREQ - 1:
-            report_logs(episode, episode_reward_all, step)
+            report_logs(episode, episode_reward, step)
 
         # save model
         if save_path_base and episode % save_freq == save_freq - 1:
