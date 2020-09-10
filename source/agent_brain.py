@@ -42,10 +42,10 @@ class Agent:
                  eps_decay_steps: int,  # number of calls of 'learn' to
                  update_target_every_eps=10,
                  # decrease epsilon to zero
-                 memory_size=50_000,
+                 memory_size=500,
                  eps_start=0.9,
                  eps_end=0.05,
-                 batch_size=10,
+                 batch_size=32,
                  discount=0.9,
                  tb_writer=None):
         self.n_features = n_features

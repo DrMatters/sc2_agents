@@ -29,7 +29,7 @@ RESULT_PATH_BASE = '../results/'
 LOGGING_FREQ = 10  # episodes
 
 BATCH_SIZE = 128
-GAMMA = 0.999
+DISCOUNT = 0.999
 TARGET_UPDATE = 10
 N_EPISODE = 200
 LEARN_FREQ = 1  # on steps
@@ -222,7 +222,7 @@ def prepare_agents(env: StarCraft2Env, eps_decay_steps, tb_writer):
     for i in range(n_agents):
         agents.append(
             Agent(i, n_features, n_actions, eps_decay_steps, TARGET_UPDATE,
-                  batch_size=BATCH_SIZE, tb_writer=tb_writer)
+                  batch_size=BATCH_SIZE, tb_writer=tb_writer, discount=DISCOUNT)
         )
     return agents
 
