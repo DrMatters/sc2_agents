@@ -34,36 +34,45 @@ class BaseGeneticInd(abc.ABC):
 
 
 class AgentwiseFullyConnected(BaseInd, BaseGeneticInd):
-    def __init__(self, models: Dict[int, AgentDQN], num_states: int, num_actions: int):
+    def __init__(self, models: Dict[int, AgentDQN], num_states: int,
+                 num_actions: int):
         self.models = models
         self.num_agents = len(self.models)
         self.num_states = num_states
         self.num_actions = num_actions
 
     @staticmethod
-    def init_simple(ind_class: BaseInd, num_agents: int, num_states: int, num_actions: int) -> 'BaseGeneticInd':
+    def init_simple(ind_class: BaseInd, num_agents: int, num_states: int,
+                    num_actions: int) -> 'BaseGeneticInd':
         # models = [None] * num_agents
         models = {}
         for agent_id in range(num_agents):
             models[agent_id] = AgentDQN(num_states, num_actions).requires_grad_(False)
         return AgentwiseFullyConnected(models, num_states, num_actions)
 
+    def get_action(self, agent_id, state):
+        with torch.no_grad():
+            state = torch.Tensor(state)
+            # t.max(1) will return largest column value of each row.
+            # second column on max result is index of where max element was
+            # found, so we pick action with the larger expected reward.
+            response = self.models[agent_id](state)
+            # argmax
+            result = response.max(0)[1].view(1, 1)
+        return result
+
     def get_actions(self, states: Dict[int, int],
                     avail_actions: Dict[int, np.array],
                     epsilon: float = 0.7) -> np.ndarray:
-        agents_actions = np.ones(self.num_agents)
-        with torch.no_grad():
-            for agent_id in range(self.num_agents):
-                state = torch.Tensor(states[agent_id])
-                # t.max(1) will return largest column value of each row.
-                # second column on max result is index of where max element was
-                # found, so we pick action with the larger expected reward.
-                response = self.models[agent_id](state)
-                result = response.max(0)[1].view(1, 1).cpu().item()
-                if result in avail_actions[agent_id]:  # if action is possible
-                    # else remains one (stop)
-                    agents_actions[agent_id] = result
-        return agents_actions
+        taken_actions = np.ones(self.num_agents)
+        for agent_id in range(self.num_agents):
+            selected_action = self.get_action(agent_id, states[agent_id])
+            if selected_action in avail_actions[agent_id]:
+                taken_actions[agent_id] = selected_action
+            elif avail_actions[agent_id][0] == 1:
+                taken_actions[agent_id] = 0  # if dead use stub action
+            # else (if action is not available): action = 1
+        return taken_actions
 
     @staticmethod
     def mate(left: 'AgentwiseFullyConnected', right: 'AgentwiseFullyConnected') \

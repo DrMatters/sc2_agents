@@ -1,5 +1,5 @@
 import abc
-from typing import Tuple
+from typing import Tuple, Any
 
 import numpy as np
 import smac.env as sm_env
@@ -20,8 +20,32 @@ class BaseSCEvaluator(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def evaluate(self, individual: individuals.BaseInd) -> Tuple[float]:
+    def get_agent_state(self, agent_id: int) -> Any:
         pass
+
+    def get_avail_and_states(self):
+        agents_states = {}
+        avail_actions_indices = {}
+        for agent_id in range(self.n_agents):
+            agents_states[agent_id] = self.get_agent_state(agent_id)
+            avail_actions = self.env.get_avail_agent_actions(agent_id)
+            # avail_actions = [0, 1, 1, 1, 1, 1, 0, 0, 0]
+            avail_actions_ind = np.nonzero(avail_actions)[0]
+            avail_actions_indices[agent_id] = avail_actions_ind
+            # avail_actions_ind = [1, 2, 3, 4, 5]
+        return agents_states, avail_actions_indices
+
+    def evaluate(self, individual: individuals.BaseInd) -> Tuple[float]:
+        self.env.reset()
+        terminated = False
+        episode_reward = 0
+        while not terminated:
+            agents_states, avail_actions_indices = self.get_avail_and_states()
+            actions = individual.get_actions(agents_states, avail_actions_indices)
+
+            reward, terminated, _ = self.env.step(actions)
+            episode_reward += reward
+        return episode_reward,
 
     def evaluate_single(self, individual, n=10):
         eval_res = []
@@ -38,36 +62,16 @@ class BaseSCEvaluator(abc.ABC):
         return eval_res
 
 
+class SCNativeEvaluator(BaseSCEvaluator):
+    def get_num_states(self) -> int:
+        return self.env.get_obs_size()
+
+    def get_agent_state(self, agent_id):
+        return self.env.get_obs_agent(agent_id)
+
 class SCAbsPosEvaluator(BaseSCEvaluator):
     def get_num_states(self) -> int:
         return 32
-
-    def evaluate(self, individual: individuals.BaseInd) -> Tuple[float]:
-        self.env.reset()
-        terminated = False
-        episode_reward = 0
-        while not terminated:
-            agents_states = {}
-            avail_actions_indices = {}
-
-            # get actions for all agents
-            for agent_id in range(self.n_agents):
-                agent_info = self.env.get_unit_by_id(agent_id)
-                agents_states[agent_id] = self._get_state_fox(agent_info.pos.x,
-                                                              agent_info.pos.y)
-                avail_actions = self.env.get_avail_agent_actions(agent_id)
-                # avail_actions = [0, 1, 1, 1, 1, 1, 0, 0, 0]
-                avail_actions_ind = np.nonzero(avail_actions)[0]
-                avail_actions_indices[agent_id] = avail_actions_ind
-                # avail_actions_ind = [1, 2, 3, 4, 5]
-
-            actions = individual.get_actions(agents_states,
-                                             avail_actions_indices,
-                                             self.epsilon)
-
-            reward, terminated, _ = self.env.step(actions)
-            episode_reward += reward
-        return episode_reward,
 
     def get_agent_state(self, agent_id):
         agent_info = self.env.get_unit_by_id(agent_id)
