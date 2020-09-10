@@ -44,7 +44,6 @@ class Agent:
                  memory_size=50_000,
                  eps_start=0.9,
                  eps_end=0.05,
-                 update_target_every=2,
                  batch_size=10,
                  discount=0.9,
                  tb_writer=None):
@@ -80,10 +79,10 @@ class Agent:
         self.memory_counter += 1
 
     def select_action(self, state, episode):
-        if self.tb_writer:
+        # todo: this is for debug
+        if self.tb_writer and episode % 25 == 0:
             self.tb_writer.add_scalar(f'{self.tb_prefix}epsilon', self.epsilon, episode)
         sample = random.random()
-        # sample = 0.99  # for debug reasons TODO: replace with proper
         if sample > self.epsilon:
             with torch.no_grad():
                 state = torch.Tensor(state)
