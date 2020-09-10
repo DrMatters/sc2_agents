@@ -15,7 +15,7 @@ EVALUATE_TOP = True
 SC2_PATH = 'G:\Programs\StarCraft II'
 
 def main():
-    toolbox, evaluator = prepare_env(individuals.AgentwiseQInd)
+    toolbox, evaluator = prepare_env(individuals.AgentwiseQTable)
 
     pop = toolbox.population(n=POPULATION)
     hof = tools.HallOfFame(1)

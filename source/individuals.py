@@ -2,6 +2,9 @@ import abc
 from typing import Dict, Tuple
 
 import numpy as np
+import torch
+
+from .agent_brain import AgentDQN
 
 
 class BaseInd(abc.ABC):
@@ -15,7 +18,7 @@ class BaseInd(abc.ABC):
 class BaseGeneticInd(abc.ABC):
     @staticmethod
     @abc.abstractmethod
-    def init_simple() -> 'BaseGeneticInd':
+    def init_simple(ind_class, num_agents, num_states, num_actions) -> 'BaseGeneticInd':
         pass
 
     @staticmethod
@@ -30,7 +33,96 @@ class BaseGeneticInd(abc.ABC):
         pass
 
 
-class AgentwiseQInd(BaseInd, BaseGeneticInd):
+class AgentwiseFullyConnected(BaseInd, BaseGeneticInd):
+    def __init__(self, models: Dict[int, AgentDQN], num_states: int, num_actions: int):
+        self.models = models
+        self.num_agents = len(self.models)
+        self.num_states = num_states
+        self.num_actions = num_actions
+
+    @staticmethod
+    def init_simple(ind_class: BaseInd, num_agents: int, num_states: int, num_actions: int) -> 'BaseGeneticInd':
+        # models = [None] * num_agents
+        models = {}
+        for agent_id in range(num_agents):
+            models[agent_id] = AgentDQN(num_states, num_actions).requires_grad_(False)
+        return AgentwiseFullyConnected(models, num_states, num_actions)
+
+    def get_actions(self, states: Dict[int, int],
+                    avail_actions: Dict[int, np.array],
+                    epsilon: float = 0.7) -> np.ndarray:
+        agents_actions = np.ones(self.num_agents)
+        with torch.no_grad():
+            for agent_id in range(self.num_agents):
+                state = torch.Tensor(states[agent_id])
+                # t.max(1) will return largest column value of each row.
+                # second column on max result is index of where max element was
+                # found, so we pick action with the larger expected reward.
+                response = self.models[agent_id](state)
+                result = response.max(0)[1].view(1, 1).cpu().item()
+                if result in avail_actions[agent_id]:  # if action is possible
+                    # else remains one (stop)
+                    agents_actions[agent_id] = result
+        return agents_actions
+
+    @staticmethod
+    def mate(left: 'AgentwiseFullyConnected', right: 'AgentwiseFullyConnected') \
+            -> Tuple['BaseGeneticInd', 'BaseGeneticInd']:
+        return AgentwiseFullyConnected.mate_shuffle(left, right)
+
+    @staticmethod
+    def mate_shuffle(left: 'AgentwiseFullyConnected', right: 'AgentwiseFullyConnected') \
+            -> Tuple['BaseGeneticInd', 'BaseGeneticInd']:
+        # # array of [1, 0] with the shape of q table of a single agent
+        l_child = AgentwiseFullyConnected._mate_shuffle_single(left, right)
+        r_child = AgentwiseFullyConnected._mate_shuffle_single(left, right)
+        return l_child, r_child
+
+    @staticmethod
+    def _mate_shuffle_single(left, right):
+        with torch.no_grad():
+            models = {}
+            for agent_id in range(left.num_agents):
+                child_model = AgentDQN(left.num_states, left.num_actions)
+                layer_name: str
+                layer_weights_left: torch.Tensor
+                layer_weights_right: torch.Tensor
+                for (layer_name, layer_weights_left), (_, layer_weights_right) in zip(
+                        left.models[agent_id].state_dict().items(),
+                        right.models[agent_id].state_dict().items()
+                ):
+                    weights_copy_mask = torch.randint(0, 2, layer_weights_left.shape, dtype=torch.bool)
+                    child_weights = layer_weights_right.detach().clone()
+                    child_weights[weights_copy_mask] = layer_weights_left[weights_copy_mask]
+                    child_model.state_dict()[layer_name] = child_weights
+                models[agent_id] = child_model
+            child = AgentwiseFullyConnected(models, left.num_states, left.num_actions)
+        return child
+
+    @staticmethod
+    def mutate(ind: 'AgentwiseFullyConnected', loc: float, scale: float,
+               indpb: float):
+        with torch.no_grad():
+            for agent_id in range(ind.num_agents):
+                layer_name: str
+                layer_weights: torch.Tensor
+                for layer_name, layer_weights in ind.models[agent_id].state_dict().items():
+                    mutate_mask = np.random.random(layer_weights.shape) < indpb
+                    mutate_level = np.random.normal(loc, scale, layer_weights.shape)
+                    mutate_level_masked = np.multiply(mutate_mask, mutate_level)
+                    # mutate_level_masked example:
+                    # here  [[0, 1.28]
+                    #        [0.97, 0]]
+                    # we replace all 0s with 1, so when multiply they remain unchanged
+                    mutate_level_masked[mutate_level_masked == 0] = 1
+                    mutate_level_masked_t = torch.tensor(mutate_level_masked,
+                                                         dtype=layer_weights.dtype,
+                                                         device=layer_weights.device)
+                    ind.models[layer_name] = layer_weights * mutate_level_masked_t
+                    return ind,
+
+
+class AgentwiseQTable(BaseInd, BaseGeneticInd):
     def __init__(self, q_table: np.ndarray):
         self.num_agents = q_table.shape[0]
         self.num_states = q_table.shape[1]
@@ -47,7 +139,7 @@ class AgentwiseQInd(BaseInd, BaseGeneticInd):
         agents_actions = np.zeros(self.num_agents)
         for agent_id in range(self.num_agents):
             agents_actions[agent_id] = self._get_action(
-                agent_id, states[agent_id], avail_actions[agent_id], epsilon
+                agent_id, states[agent_id], avail_actions[agent_id]
             )
         return agents_actions
 
@@ -57,28 +149,27 @@ class AgentwiseQInd(BaseInd, BaseGeneticInd):
         return ind_class(q_table)
 
     @staticmethod
-    def mate_replace(left: 'AgentwiseQInd', right: 'AgentwiseQInd') \
-            -> Tuple['AgentwiseQInd', 'AgentwiseQInd']:
+    def mate_replace(left: 'AgentwiseQTable', right: 'AgentwiseQTable') \
+            -> Tuple['AgentwiseQTable', 'AgentwiseQTable']:
 
-        left_child_q_table = AgentwiseQInd._get_child_rand_replace(left, right)
-        right_child_q_table = AgentwiseQInd._get_child_rand_replace(left, right)
+        left_child_q_table = AgentwiseQTable._get_child_rand_replace(left, right)
+        right_child_q_table = AgentwiseQTable._get_child_rand_replace(left, right)
         left.q_table = left_child_q_table
         right.q_table = right_child_q_table
         return left, right
 
     @staticmethod
-    def mate(left: 'AgentwiseQInd', right: 'AgentwiseQInd') \
-            -> Tuple['AgentwiseQInd', 'AgentwiseQInd']:
-        left_child_q_table = AgentwiseQInd._get_child_rand_avg(left, right)
-        right_child_q_table = AgentwiseQInd._get_child_rand_avg(left, right)
-        left.q_table = left_child_q_table
-        right.q_table = right_child_q_table
-        return left, right
-
+    def mate(left: 'AgentwiseQTable', right: 'AgentwiseQTable') \
+            -> Tuple['AgentwiseQTable', 'AgentwiseQTable']:
+        left_child_q_table = AgentwiseQTable._get_child_avg(left, right)
+        right_child_q_table = AgentwiseQTable._get_child_avg(left, right)
+        left_child = AgentwiseQTable(left_child_q_table)
+        right_child = AgentwiseQTable(right_child_q_table)
+        return left_child, right_child
 
     @staticmethod
-    def mutate(ind: 'AgentwiseQInd', loc: float, scale: float,
-               indpb: float) -> Tuple['AgentwiseQInd']:
+    def mutate(ind: 'AgentwiseQTable', loc: float, scale: float,
+               indpb: float) -> Tuple['AgentwiseQTable']:
         mutate_mask = np.random.random(ind.q_table.shape) < indpb
         mutate_level = np.random.normal(loc, scale, ind.q_table.shape)
         mutate_level_masked = np.multiply(mutate_mask, mutate_level)
@@ -97,13 +188,13 @@ class AgentwiseQInd(BaseInd, BaseGeneticInd):
     @staticmethod
     def load(file):
         q_table = np.load(file)
-        return AgentwiseQInd(q_table)
+        return AgentwiseQTable(q_table)
 
     @staticmethod
     def _get_child_rand_replace(left, right):
         child_q = np.zeros(left.q_table.shape)
         for agent_id in range(left.num_agents):
-            agent_q_table_from = AgentwiseQInd._get_rand_q_table_from()
+            agent_q_table_from = AgentwiseQTable._get_rand_q_table_from()
             if agent_q_table_from == 'left':
                 child_q[agent_id] = np.copy(left.q_table[agent_id])
             elif agent_q_table_from == 'right':
@@ -117,7 +208,7 @@ class AgentwiseQInd(BaseInd, BaseGeneticInd):
         return child_q
 
     @staticmethod
-    def _get_child_rand_avg(left, right):
+    def _get_child_avg(left, right):
         # child_q = np.copy(left.q_table)
         # left_parent_allele_mask = np.random.random(left.q_table.shape) > 0.5
         # child_q = child_q * left_parent_allele_mask
@@ -138,14 +229,10 @@ class AgentwiseQInd(BaseInd, BaseGeneticInd):
         return q_table_from
 
     def _get_action(self, agent_id: int, agent_state: int,
-                    avail_actions: np.ndarray, epsilon: float = 0.7) -> np.int64:
+                    avail_actions: np.ndarray) -> np.int64:
 
-        if np.random.rand() < (1 - epsilon):
-            action = np.random.choice(avail_actions)  # Explore action state
-        else:
-            actions_val = {}
-            for action_index in avail_actions:
-                actions_val[action_index] = \
-                    self.q_table[agent_id, int(agent_state), action_index]
-            action = max(actions_val, key=actions_val.get)
-        return action
+        actions_val = {}
+        for action_index in avail_actions:
+            actions_val[action_index] = \
+                self.q_table[agent_id, int(agent_state), action_index]
+        return max(actions_val, key=actions_val.get)

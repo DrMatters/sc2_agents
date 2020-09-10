@@ -22,7 +22,7 @@ def main():
     np.random.seed(42)
     fnames = load_latest_q_table()
     if fnames:
-        top_individual = individuals.AgentwiseQInd.load(fnames[0])
+        top_individual = individuals.AgentwiseQTable.load(fnames[0])
     else:
         raise FileNotFoundError("Found no individuals")
 
