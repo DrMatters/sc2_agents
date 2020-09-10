@@ -165,7 +165,7 @@ def prepare_env_and_agents():
     env = StarCraft2Env(map_name="2m2zFOX", seed=42, reward_only_positive=False,
                         obs_timestep_number=True, reward_scale_rate=200)
     # prepare agents
-    agents: List[Agent] = prepare_agents(env, eps_decay_steps, tb_writer)
+    agents: List[Agent] = prepare_agents(env, eps_decay_eps, tb_writer)
     return save_freq, agents, env, num_exploration, num_exploration_ep, save_path_base, tb_writer
 
 
@@ -224,7 +224,10 @@ def prepare_agents(env: StarCraft2Env, eps_decay_steps, tb_writer):
     n_actions = env_info['n_actions']
     n_features = env.get_obs_size()
     for i in range(n_agents):
-        agents.append(Agent(i, n_features, n_actions, eps_decay_steps, batch_size=BATCH_SIZE, tb_writer=tb_writer))
+        agents.append(
+            Agent(i, n_features, n_actions, eps_decay_steps, TARGET_UPDATE,
+                  batch_size=BATCH_SIZE, tb_writer=tb_writer)
+        )
     return agents
 
 

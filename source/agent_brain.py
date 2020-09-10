@@ -40,6 +40,7 @@ class Agent:
                  n_features: int,
                  n_actions: int,
                  eps_decay_steps: int,  # number of calls of 'learn' to
+                 update_target_every_eps=10,
                  # decrease epsilon to zero
                  memory_size=50_000,
                  eps_start=0.9,
@@ -50,16 +51,15 @@ class Agent:
         self.n_features = n_features
         self.n_actions = n_actions
         self.eps_decay_steps = eps_decay_steps
+        self.update_target_every_ep = update_target_every_eps
         self.memory_size = memory_size
         self.memory = np.zeros((self.memory_size, n_features * 2 + 3))
-        self.replace_target_after = 300
         self.batch_size = batch_size
         self.discount = discount
         self.eps_start = eps_start
         self.eps_end = eps_end
         self.epsilon = self.eps_start
         self.memory_counter = 0
-        self.learn_step_counter = 0
         self.model = AgentDQN(n_features, n_actions)
         self.target_model = AgentDQN(n_features, n_actions)
         self.target_model.load_state_dict(self.model.state_dict())
@@ -101,10 +101,13 @@ class Agent:
             logging.info("There's less observations recorded than batch size")
             return
 
-        if self.learn_step_counter % self.replace_target_after == self.replace_target_after - 1:
+        # swap models
+        if episode % self.update_target_every_ep == self.update_target_every_ep - 1:
             self.target_model.load_state_dict(self.model.state_dict())
+        # if self.learn_step_counter % self.replace_target_after == self.replace_target_after - 1:
+        #     self.target_model.load_state_dict(self.model.state_dict())
 
-            # sample batch memory from all memory
+        # sample batch memory from memory
         if self.memory_counter > self.memory_size:
             sample_index = np.random.choice(self.memory_size, size=self.batch_size)
         else:
@@ -142,14 +145,11 @@ class Agent:
         self.optimizer.step()
 
         self.cost_history.append(loss.cpu().item())
-        self.learn_step_counter += 1
 
         if self.tb_writer:
             self.tb_writer.add_scalar(f'{self.tb_prefix}loss',
                                       loss.item(), episode)
-        # todo: save model
 
-        # update epsilon (exploration (random move) probability)
+        # update epsilon. Exploration (random move) probability
         eps_delta = (self.eps_start - self.eps_end) / self.eps_decay_steps
-        self.epsilon = max(self.eps_start - eps_delta * self.learn_step_counter,
-                           self.eps_end)
+        self.epsilon = max(self.eps_start - eps_delta * episode, self.eps_end)
