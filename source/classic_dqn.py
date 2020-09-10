@@ -124,7 +124,7 @@ def main():
                     agents[agent_id].learn(episode)
 
         # episode_wise loop
-        if num_exploration_eps >= episode and not start_training:
+        if num_exploration_eps <= episode and not start_training:
             start_training = True
             logging.info("Exploration finished!")
 
@@ -154,7 +154,7 @@ def prepare_env_and_agents():
 
     # calculate eps decay and num exploration from N_EPISODE
     num_exploration_ep = int(N_EPISODE * .15)
-    save_freq = min(20, N_EPISODE // 20)
+    save_freq = min(20, N_EPISODE // 15)
     eps_decay_eps = N_EPISODE - num_exploration_ep
 
     # prepare env
