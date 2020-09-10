@@ -9,6 +9,7 @@ import numpy as np
 import tensorboardX
 import torch
 from smac.env import StarCraft2Env
+from tqdm import tqdm
 
 from .agent_brain import Agent
 
@@ -28,7 +29,7 @@ SC2_PATH = '/Applications/StarCraft II'
 RESULT_PATH_BASE = '../results/'
 LOGGING_FREQ = 10  # episodes
 
-BATCH_SIZE = 128
+BATCH_SIZE = 10
 DISCOUNT = 0.999
 TARGET_UPDATE = 10
 N_EPISODE = 200
@@ -38,7 +39,6 @@ os.environ['SC2PATH'] = SC2_PATH
 
 
 def main():
-
     save_freq, agents, env, num_exploration_eps, save_path_base, tb_writer = \
         prepare_env_and_agents()
     n_agents = len(agents)
@@ -46,9 +46,9 @@ def main():
     start_training = False
     # attack_target_action_offset = 6
 
-    for episode in range(N_EPISODE):
-        if episode % LOGGING_FREQ == 0:
-            logging.info(f'Episode {episode} has started')
+    for episode in tqdm(range(N_EPISODE)):
+        # if episode % LOGGING_FREQ == 0:
+        #     logging.info(f'Episode {episode} has started')
         env.reset()
 
         # reset data
@@ -126,7 +126,7 @@ def main():
         # episode_wise loop
         if num_exploration_eps >= episode and not start_training:
             start_training = True
-            print("Exploration finished!")
+            logging.info("Exploration finished!")
 
         # report to tensorboard
         report_tensorboard(episode, episode_reward_agent,
