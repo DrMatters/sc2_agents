@@ -83,9 +83,11 @@ class AgentwiseFullyConnected(BaseInd, BaseGeneticInd):
     def mate_shuffle(left: 'AgentwiseFullyConnected', right: 'AgentwiseFullyConnected') \
             -> Tuple['BaseGeneticInd', 'BaseGeneticInd']:
         # # array of [1, 0] with the shape of q table of a single agent
-        l_child = AgentwiseFullyConnected._mate_shuffle_single(left, right)
-        r_child = AgentwiseFullyConnected._mate_shuffle_single(left, right)
-        return l_child, r_child
+        l_models = AgentwiseFullyConnected._mate_shuffle_single(left, right)
+        r_models = AgentwiseFullyConnected._mate_shuffle_single(left, right)
+        left.models = l_models
+        right.models = r_models
+        return left, right
 
     @staticmethod
     def _mate_shuffle_single(left, right):
@@ -105,8 +107,7 @@ class AgentwiseFullyConnected(BaseInd, BaseGeneticInd):
                     child_weights[weights_copy_mask] = layer_weights_left[weights_copy_mask]
                     child_model.state_dict()[layer_name] = child_weights
                 models[agent_id] = child_model
-            child = AgentwiseFullyConnected(models, left.num_states, left.num_actions)
-        return child
+        return models
 
     @staticmethod
     def mutate(ind: 'AgentwiseFullyConnected', loc: float, scale: float,
@@ -172,9 +173,9 @@ class AgentwiseQTable(BaseInd, BaseGeneticInd):
             -> Tuple['AgentwiseQTable', 'AgentwiseQTable']:
         left_child_q_table = AgentwiseQTable._get_child_avg(left, right)
         right_child_q_table = AgentwiseQTable._get_child_avg(left, right)
-        left_child = AgentwiseQTable(left_child_q_table)
-        right_child = AgentwiseQTable(right_child_q_table)
-        return left_child, right_child
+        left.q_table = left_child_q_table
+        right.q_table = right_child_q_table
+        return left, right
 
     @staticmethod
     def mutate(ind: 'AgentwiseQTable', loc: float, scale: float,

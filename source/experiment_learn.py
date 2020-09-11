@@ -15,7 +15,9 @@ EVALUATE_TOP = True
 SC2_PATH = 'G:\Programs\StarCraft II'
 
 def main():
-    toolbox, evaluator = prepare_env(individuals.AgentwiseQTable)
+    env = StarCraft2Env(map_name="2m2zFOX", difficulty="1", seed=42)
+    evaluator = evaluate.SCAbsPosEvaluator(env)
+    toolbox, evaluator = prepare_env(individuals.AgentwiseQTable, evaluator)
 
     pop = toolbox.population(n=POPULATION)
     hof = tools.HallOfFame(1)
@@ -42,13 +44,11 @@ def save_top_individual(hof):
     top.save(f'{now}---top_individual_q_table.npy')
 
 
-def prepare_env(individual_class: Type[individuals.BaseGeneticInd]):
+def prepare_env(individual_class: Type[individuals.BaseGeneticInd], evaluator):
     random.seed(42)
     np.random.seed(42)
     os.environ['SC2PATH'] = SC2_PATH
-    env = StarCraft2Env(map_name="2m2zFOX", difficulty="1", seed=42)
 
-    evaluator = evaluate.SCAbsPosEvaluator(env)
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
     creator.create("Individual", individual_class,
                    fitness=creator.FitnessMax)
