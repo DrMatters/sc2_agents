@@ -12,11 +12,19 @@ from source import evaluate, individuals
 POPULATION = 10
 NUM_GENERATIONS = 10
 EVALUATE_TOP = True
-SC2_PATH = 'G:\Programs\StarCraft II'
+SC2_PATH = '/Applications/StarCraft II'
+PRESET = 'q_table'
+
 
 def main():
-    env = StarCraft2Env(map_name="2m2zFOX", difficulty="1", seed=42)
-    evaluator = evaluate.SCAbsPosEvaluator(env)
+    if PRESET == 'q_table':
+        env = StarCraft2Env(map_name="2m2zFOX", difficulty="1", seed=42)
+        evaluator = evaluate.SCAbsPosEvaluator(env)
+    elif PRESET == 'dqn':
+        env = StarCraft2Env(map_name="2m2zFOX", seed=42,
+                            reward_only_positive=False, obs_timestep_number=True,
+                            reward_scale_rate=200)
+        evaluator = evaluate.SCNativeEvaluator(env)
     toolbox, evaluator = prepare_env(individuals.AgentwiseQTable, evaluator)
 
     pop = toolbox.population(n=POPULATION)
