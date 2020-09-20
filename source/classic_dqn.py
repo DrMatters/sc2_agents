@@ -9,13 +9,8 @@ import numpy as np
 import tensorboardX
 import torch
 from smac.env import StarCraft2Env
-from tqdm import tqdm
 
 from .agent_brain import Agent
-
-random.seed(42)
-np.random.seed(42)
-torch.manual_seed(42)
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -24,18 +19,25 @@ logging.basicConfig(
 
 # %%
 
-MODEL_NAME = 'basic_inp_avg_out'
-SC2_PATH = '/Applications/StarCraft II'
+MODEL_NAME = 'basic_inp_avg_out_lr_e-5_episode_num_500_eps_fraq_0.5_batch_size_32_new_eps'
+SC2_PATH = 'G:\Programs\StarCraft II'
 RESULT_PATH_BASE = '../results/'
 LOGGING_FREQ = 10  # episodes
+SEED = 228
 
-BATCH_SIZE = 10
+LR = 1e-5
+BATCH_SIZE = 32
 DISCOUNT = 0.999
 TARGET_UPDATE = 10
-N_EPISODE = 200
+N_EPISODE = 1000
+MEMORY_SIZE = N_EPISODE * 2
+EPS_TIME_FRACTION = 0.5
 LEARN_FREQ = 1  # on steps
 
 os.environ['SC2PATH'] = SC2_PATH
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
 
 
 def main():
@@ -46,7 +48,9 @@ def main():
     start_training = False
     # attack_target_action_offset = 6
 
-    for episode in tqdm(range(N_EPISODE)):
+    reward_hist = []
+    custom_reward_hist = []
+    for episode in range(N_EPISODE):
         # if episode % LOGGING_FREQ == 0:
         #     logging.info(f'Episode {episode} has started')
         env.reset()
@@ -86,6 +90,7 @@ def main():
             # RL take action and get next observation and reward
             env_reward, done, _ = env.step(taken_actions)
             episode_reward += env_reward
+            reward_hist.append(env_reward)
             observation_after = [0] * n_agents
             agent_health_after = [0] * n_agents
 
@@ -100,6 +105,7 @@ def main():
                     agent_health_after, agent_health_before, agent_id,
                     dead_units, env_reward, taken_actions
                 )
+                custom_reward_hist.append(reward)
 
                 agents_episode_reward[agent_id] += reward
 
@@ -139,6 +145,7 @@ def main():
         # save model
         if save_path_base and episode % save_freq == save_freq - 1:
             save_models(agents, episode, save_path_base, start_training)
+    save_models(agents, 'final', save_path_base, start_training)
 
 
 def prepare_env_and_agents():
@@ -155,7 +162,7 @@ def prepare_env_and_agents():
     # calculate eps decay and num exploration from N_EPISODE
     num_exploration_ep = int(N_EPISODE * .15)
     save_freq = min(20, N_EPISODE // 15)
-    eps_decay_eps = N_EPISODE - num_exploration_ep
+    eps_decay_eps = N_EPISODE * EPS_TIME_FRACTION
 
     # prepare env
     env = StarCraft2Env(map_name="2m2zFOX", seed=42, reward_only_positive=False,
@@ -197,20 +204,17 @@ def report_logs(episode, episode_reward_all, step):
                  f"episode reward: {episode_reward_all}")
 
 
-def save_models(agents, episode, save_path_base, start_training):
+def save_models(agents: List[Agent], episode, save_path_base, start_training):
     now = datetime.datetime.now()
-    base_model_path = save_path_base / 'models'
+    base_model_path = save_path_base / 'models' / f'd{now:%Y_%m_%d}' \
+                                                  f'_t{now:%H_%M_%S}' \
+                                                  f'_ep{episode}' \
+                                                  f'_learn_started{int(start_training)}'
     base_model_path.mkdir(parents=True, exist_ok=True)
     for agent_id in range(len(agents)):
-        model_path = base_model_path \
-                     / f'd{now:%Y_%m_%d}' \
-                       f'_t{now:%H_%M_%S}' \
-                       f'_ep{episode}' \
-                       f'_learn_started{int(start_training)}' \
-                       f'_agent_no_{agent_id}' \
-                       f'.torch'
+        model_path = base_model_path / f'agent_{agent_id}.pt'
         logging.info(f'saving model {model_path}')
-        torch.save(agents[agent_id].model, model_path)
+        torch.save(agents[agent_id].policy_model, model_path)
 
 
 def prepare_agents(env: StarCraft2Env, eps_decay_steps, tb_writer):
@@ -221,8 +225,8 @@ def prepare_agents(env: StarCraft2Env, eps_decay_steps, tb_writer):
     n_features = env.get_obs_size()
     for i in range(n_agents):
         agents.append(
-            Agent(i, n_features, n_actions, eps_decay_steps, TARGET_UPDATE,
-                  batch_size=BATCH_SIZE, tb_writer=tb_writer, discount=DISCOUNT)
+            Agent(i, n_features, n_actions, eps_decay_steps, LR, TARGET_UPDATE,
+                  MEMORY_SIZE, batch_size=BATCH_SIZE, tb_writer=tb_writer, discount=DISCOUNT)
         )
     return agents
 

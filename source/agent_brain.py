@@ -1,9 +1,9 @@
 import logging
 import random
-import tensorboardX
 from typing import Optional
 
 import numpy as np
+import tensorboardX
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -40,6 +40,7 @@ class Agent:
                  n_features: int,
                  n_actions: int,
                  eps_decay_steps: int,  # number of calls of 'learn' to
+                 lr=1e-5,
                  update_target_every_eps=10,
                  # decrease epsilon to zero
                  memory_size=500,
@@ -60,13 +61,14 @@ class Agent:
         self.eps_end = eps_end
         self.epsilon = self.eps_start
         self.memory_counter = 0
-        self.model = AgentDQN(n_features, n_actions)
+        self.policy_model = AgentDQN(n_features, n_actions)
         self.target_model = AgentDQN(n_features, n_actions)
-        self.target_model.load_state_dict(self.model.state_dict())
+        self.target_model.load_state_dict(self.policy_model.state_dict())
         self.criterion = nn.MSELoss()
-        self.optimizer = optim.Adam(self.model.parameters())
+        self.optimizer = optim.Adam(self.policy_model.parameters(), lr=lr)
         self.tb_writer = tb_writer
 
+        self.prev_episode_call = -1
         self.tb_prefix = f'agent_no_{agent_id}/'
         self.cost_history = []
 
@@ -89,7 +91,7 @@ class Agent:
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                response = self.model(state)
+                response = self.policy_model(state)
                 # argmax
                 result = response.max(0)[1].view(1, 1)
         else:
@@ -97,15 +99,21 @@ class Agent:
         return result.cpu().item()
 
     def learn(self, episode):
+        # we need to swap models
+        if self.prev_episode_call == episode:
+            ep_first_call = False
+        else:
+            ep_first_call = True
+        self.prev_episode_call = episode
+
         if self.memory_counter < self.batch_size:
             logging.info("There's less observations recorded than batch size")
             return
 
         # swap models
-        if episode % self.update_target_every_ep == self.update_target_every_ep - 1:
-            self.target_model.load_state_dict(self.model.state_dict())
-        # if self.learn_step_counter % self.replace_target_after == self.replace_target_after - 1:
-        #     self.target_model.load_state_dict(self.model.state_dict())
+        if episode % self.update_target_every_ep == 0 and ep_first_call:
+            logging.info(f'Swapping models, episode {episode}')
+            self.target_model.load_state_dict(self.policy_model.state_dict())
 
         # sample batch memory from memory
         if self.memory_counter > self.memory_size:
@@ -117,7 +125,7 @@ class Agent:
         # Get current states from minibatch, then query NN model for Q values
         # batch contains: idx, (observation_before, [action, reward, done], observation_after)
         current_states = torch.from_numpy(batch_memory[:, :self.n_features]).type(torch.FloatTensor)
-        current_qs = self.model(current_states)
+        current_qs = self.policy_model(current_states)
 
         # Get future states from minibatch, then query NN model for Q values
         # When using target network, query it, otherwise main network should be queried
@@ -138,10 +146,12 @@ class Agent:
         qs_target[:, actions_ind] = updated_reward.type(torch.FloatTensor)
 
         # model & optimizer step
-        self.optimizer.zero_grad()
-        outputs = self.model(current_states)
+        outputs = self.policy_model(current_states)
         loss = self.criterion(outputs, qs_target)
+        self.optimizer.zero_grad()
         loss.backward()
+        for param in self.policy_model.parameters():
+            param.grad.data.clamp_(-1, 1)
         self.optimizer.step()
 
         self.cost_history.append(loss.cpu().item())
