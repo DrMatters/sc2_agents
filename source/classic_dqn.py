@@ -10,7 +10,7 @@ import tensorboardX
 import torch
 from smac.env import StarCraft2Env
 
-from .agent_brain import Agent
+from source.agent_brain import Agent
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',

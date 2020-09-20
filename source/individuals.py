@@ -4,7 +4,7 @@ from typing import Dict, Tuple
 import numpy as np
 import torch
 
-from .agent_brain import AgentDQN
+from source.agent_brain import AgentDQN
 
 
 class BaseInd(abc.ABC):
@@ -69,7 +69,7 @@ class AgentwiseFullyConnected(BaseInd, BaseGeneticInd):
             selected_action = self.get_action(agent_id, states[agent_id])
             if selected_action in avail_actions[agent_id]:
                 taken_actions[agent_id] = selected_action
-            elif avail_actions[agent_id][0] == 1:
+            elif 0 in avail_actions[agent_id]:
                 taken_actions[agent_id] = 0  # if dead use stub action
             # else (if action is not available): action = 1
         return taken_actions
