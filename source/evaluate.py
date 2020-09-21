@@ -83,7 +83,7 @@ class SCAbsPosEvaluator(BaseSCEvaluator):
         state = 11  # начальная позиция для случая 1 агента! для 2 может быть ошибка!!
         # print (agent_posX)
         # print (agent_posY)
-
+        # this is legacy code
         if 6 < agent_pos_x < 7 and 16.2 < agent_pos_y < 17:
             state = 0
         elif 7 < agent_pos_x < 8 and 16.2 < agent_pos_y < 17:

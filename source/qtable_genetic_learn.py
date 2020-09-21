@@ -9,23 +9,27 @@ from smac.env import StarCraft2Env
 
 from source import evaluate, individuals
 
+SEED = 1337
 POPULATION = 10
 NUM_GENERATIONS = 10
 EVALUATE_TOP = True
-SC2_PATH = '/Applications/StarCraft II'
+SC2_PATH = 'G:\Programs\StarCraft II'
 PRESET = 'q_table'
 
 
 def main():
     if PRESET == 'q_table':
-        env = StarCraft2Env(map_name="2m2zFOX", difficulty="1", seed=42)
+        # env = StarCraft2Env(map_name="2m2zFOX", difficulty="1", seed=SEED)
+        env = StarCraft2Env(map_name="2m2zFOX", seed=SEED,
+                            reward_only_positive=False, obs_timestep_number=True,
+                            reward_scale_rate=200)
         evaluator = evaluate.SCAbsPosEvaluator(env)
     elif PRESET == 'dqn':
-        env = StarCraft2Env(map_name="2m2zFOX", seed=42,
+        env = StarCraft2Env(map_name="2m2zFOX", seed=SEED,
                             reward_only_positive=False, obs_timestep_number=True,
                             reward_scale_rate=200)
         evaluator = evaluate.SCNativeEvaluator(env)
-    toolbox, evaluator = prepare_env(individuals.AgentwiseQTable, evaluator)
+    toolbox = prepare_env(individuals.AgentwiseQTable, evaluator)
 
     pop = toolbox.population(n=POPULATION)
     hof = tools.HallOfFame(1)
@@ -71,7 +75,7 @@ def prepare_env(individual_class: Type[individuals.BaseGeneticInd], evaluator):
     toolbox.register("mutate", individual_class.mutate, loc=1,
                      scale=0.05, indpb=0.05)
     toolbox.register("select", tools.selTournament, tournsize=3)
-    return toolbox, evaluator
+    return toolbox
 
 
 if __name__ == "__main__":
