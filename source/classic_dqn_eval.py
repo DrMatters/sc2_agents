@@ -11,7 +11,7 @@ from smac.env import StarCraft2Env
 from source import evaluate
 from source import individuals
 
-# STORED_MODEL_NAME_MASK =
+SEED = 228
 # NUM_AGENTS = 2
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -29,8 +29,9 @@ parser.add_argument('-N', '--number_of_agents', default=2, type=int)
 
 def main():
     args = parser.parse_args()
-    env = StarCraft2Env(map_name="2m2zFOX", seed=42, reward_only_positive=False,
-                        obs_timestep_number=True, reward_scale_rate=200)
+    env = StarCraft2Env(map_name="2m2zFOX", seed=SEED, reward_only_positive=False,
+                        obs_timestep_number=True, reward_scale_rate=200,
+                        realtime=False)
     evaluator = evaluate.SCNativeEvaluator(env)
 
     top_individual = read_last_individual(args, evaluator)

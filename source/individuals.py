@@ -59,7 +59,7 @@ class AgentwiseFullyConnected(BaseInd, BaseGeneticInd):
             response = self.models[agent_id](state)
             # argmax
             result = response.max(0)[1].view(1, 1)
-        return result
+        return result.cpu().item()
 
     def get_actions(self, states: Dict[int, int],
                     avail_actions: Dict[int, np.array],
