@@ -33,7 +33,20 @@ class BaseGeneticInd(abc.ABC):
         pass
 
 
-class AgentwiseFullyConnected(BaseInd, BaseGeneticInd):
+class SelfSaving(abc.ABC):
+    @abc.abstractmethod
+    def save(self, file):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def load(file):
+        pass
+
+
+class AgentwiseFullyConnected(BaseInd, BaseGeneticInd, SelfSaving):
+    models: Dict[int, agent_brain.AgentDQN]
+
     def __init__(self, models: Dict[int, agent_brain.AgentDQN], num_states: int,
                  num_actions: int):
         self.models = models
@@ -42,13 +55,13 @@ class AgentwiseFullyConnected(BaseInd, BaseGeneticInd):
         self.num_actions = num_actions
 
     @staticmethod
-    def init_simple(ind_class: BaseInd, num_agents: int, num_states: int,
+    def init_simple(ind_class, num_agents: int, num_states: int,
                     num_actions: int) -> 'BaseGeneticInd':
         # models = [None] * num_agents
         models = {}
         for agent_id in range(num_agents):
             models[agent_id] = agent_brain.AgentDQN(num_states, num_actions).requires_grad_(False)
-        return AgentwiseFullyConnected(models, num_states, num_actions)
+        return ind_class(models, num_states, num_actions)
 
     def get_action(self, agent_id, state):
         with torch.no_grad():
@@ -88,6 +101,26 @@ class AgentwiseFullyConnected(BaseInd, BaseGeneticInd):
         left.models = l_models
         right.models = r_models
         return left, right
+
+    def save(self, file):
+        save_models_dict = {idx: model.state_dict() for idx, model in self.models.items()}
+        save_models_dict['num_states'] = self.num_states
+        save_models_dict['num_actions'] = self.num_actions
+        save_models_dict['num_agents'] = self.num_agents
+        torch.save(save_models_dict, file)
+
+    @staticmethod
+    def load(file):
+        load_models_dict = torch.load(file)
+        n_features = load_models_dict['num_states']
+        n_actions = load_models_dict['num_actions']
+        n_agents = load_models_dict['num_agents']
+        models = {}
+        for agent_id in range(n_agents):
+            real_model = agent_brain.AgentDQN(n_features, n_actions)
+            real_model.load_state_dict(load_models_dict[agent_id])
+            models[agent_id] = real_model
+        return AgentwiseFullyConnected(models, n_features, n_actions)
 
     @staticmethod
     def _mate_shuffle_single(left, right):
@@ -129,10 +162,10 @@ class AgentwiseFullyConnected(BaseInd, BaseGeneticInd):
                                                          dtype=layer_weights.dtype,
                                                          device=layer_weights.device)
                     ind.models[layer_name] = layer_weights * mutate_level_masked_t
-                    return ind,
+        return ind,
 
 
-class AgentwiseQTable(BaseInd, BaseGeneticInd):
+class AgentwiseQTable(BaseInd, BaseGeneticInd, SelfSaving):
     def __init__(self, q_table: np.ndarray):
         self.num_agents = q_table.shape[0]
         self.num_states = q_table.shape[1]

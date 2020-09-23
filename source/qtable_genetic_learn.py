@@ -14,23 +14,25 @@ POPULATION = 10
 NUM_GENERATIONS = 10
 EVALUATE_TOP = True
 SC2_PATH = 'G:\Programs\StarCraft II'
-PRESET = 'q_table'
+PRESET = 'dqn'
+
+random.seed(SEED)
+np.random.seed(SEED)
 
 
 def main():
+    env = StarCraft2Env(map_name="2m2zFOX", seed=SEED,
+                        reward_only_positive=False, obs_timestep_number=True,
+                        reward_scale_rate=200)
     if PRESET == 'q_table':
         # env = StarCraft2Env(map_name="2m2zFOX", difficulty="1", seed=SEED)
-        env = StarCraft2Env(map_name="2m2zFOX", seed=SEED,
-                            reward_only_positive=False, obs_timestep_number=True,
-                            reward_scale_rate=200)
         evaluator = evaluate.SCAbsPosEvaluator(env)
         toolbox = prepare_env(individuals.AgentwiseQTable, evaluator)
     elif PRESET == 'dqn':
-        env = StarCraft2Env(map_name="2m2zFOX", seed=SEED,
-                            reward_only_positive=False, obs_timestep_number=True,
-                            reward_scale_rate=200)
         evaluator = evaluate.SCNativeEvaluator(env)
         toolbox = prepare_env(individuals.AgentwiseFullyConnected, evaluator)
+    else:
+        raise NotImplementedError(f'Preset {PRESET} for genetic learn is not available')
 
     pop = toolbox.population(n=POPULATION)
     hof = tools.HallOfFame(1)
@@ -58,8 +60,6 @@ def save_top_individual(hof):
 
 
 def prepare_env(individual_class: Type[individuals.BaseGeneticInd], evaluator):
-    random.seed(42)
-    np.random.seed(42)
     os.environ['SC2PATH'] = SC2_PATH
 
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
