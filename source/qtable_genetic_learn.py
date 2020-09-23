@@ -24,12 +24,13 @@ def main():
                             reward_only_positive=False, obs_timestep_number=True,
                             reward_scale_rate=200)
         evaluator = evaluate.SCAbsPosEvaluator(env)
+        toolbox = prepare_env(individuals.AgentwiseQTable, evaluator)
     elif PRESET == 'dqn':
         env = StarCraft2Env(map_name="2m2zFOX", seed=SEED,
                             reward_only_positive=False, obs_timestep_number=True,
                             reward_scale_rate=200)
         evaluator = evaluate.SCNativeEvaluator(env)
-    toolbox = prepare_env(individuals.AgentwiseQTable, evaluator)
+        toolbox = prepare_env(individuals.AgentwiseFullyConnected, evaluator)
 
     pop = toolbox.population(n=POPULATION)
     hof = tools.HallOfFame(1)

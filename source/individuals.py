@@ -4,7 +4,7 @@ from typing import Dict, Tuple
 import numpy as np
 import torch
 
-from source.agent_brain import AgentDQN
+from source import agent_brain
 
 
 class BaseInd(abc.ABC):
@@ -34,7 +34,7 @@ class BaseGeneticInd(abc.ABC):
 
 
 class AgentwiseFullyConnected(BaseInd, BaseGeneticInd):
-    def __init__(self, models: Dict[int, AgentDQN], num_states: int,
+    def __init__(self, models: Dict[int, agent_brain.AgentDQN], num_states: int,
                  num_actions: int):
         self.models = models
         self.num_agents = len(self.models)
@@ -47,7 +47,7 @@ class AgentwiseFullyConnected(BaseInd, BaseGeneticInd):
         # models = [None] * num_agents
         models = {}
         for agent_id in range(num_agents):
-            models[agent_id] = AgentDQN(num_states, num_actions).requires_grad_(False)
+            models[agent_id] = agent_brain.AgentDQN(num_states, num_actions).requires_grad_(False)
         return AgentwiseFullyConnected(models, num_states, num_actions)
 
     def get_action(self, agent_id, state):
@@ -94,7 +94,7 @@ class AgentwiseFullyConnected(BaseInd, BaseGeneticInd):
         with torch.no_grad():
             models = {}
             for agent_id in range(left.num_agents):
-                child_model = AgentDQN(left.num_states, left.num_actions)
+                child_model = agent_brain.AgentDQN(left.num_states, left.num_actions)
                 layer_name: str
                 layer_weights_left: torch.Tensor
                 layer_weights_right: torch.Tensor
