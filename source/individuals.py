@@ -102,26 +102,6 @@ class AgentwiseFullyConnected(BaseInd, BaseGeneticInd, SelfSaving):
         right.models = r_models
         return left, right
 
-    def save(self, file):
-        save_models_dict = {idx: model.state_dict() for idx, model in self.models.items()}
-        save_models_dict['num_states'] = self.num_states
-        save_models_dict['num_actions'] = self.num_actions
-        save_models_dict['num_agents'] = self.num_agents
-        torch.save(save_models_dict, file)
-
-    @staticmethod
-    def load(file):
-        load_models_dict = torch.load(file)
-        n_features = load_models_dict['num_states']
-        n_actions = load_models_dict['num_actions']
-        n_agents = load_models_dict['num_agents']
-        models = {}
-        for agent_id in range(n_agents):
-            real_model = agent_brain.AgentDQN(n_features, n_actions)
-            real_model.load_state_dict(load_models_dict[agent_id])
-            models[agent_id] = real_model
-        return AgentwiseFullyConnected(models, n_features, n_actions)
-
     @staticmethod
     def _mate_shuffle_single(left, right):
         with torch.no_grad():
@@ -149,6 +129,7 @@ class AgentwiseFullyConnected(BaseInd, BaseGeneticInd, SelfSaving):
             for agent_id in range(ind.num_agents):
                 layer_name: str
                 layer_weights: torch.Tensor
+                new_state_dict = {}
                 for layer_name, layer_weights in ind.models[agent_id].state_dict().items():
                     mutate_mask = np.random.random(layer_weights.shape) < indpb
                     mutate_level = np.random.normal(loc, scale, layer_weights.shape)
@@ -161,8 +142,29 @@ class AgentwiseFullyConnected(BaseInd, BaseGeneticInd, SelfSaving):
                     mutate_level_masked_t = torch.tensor(mutate_level_masked,
                                                          dtype=layer_weights.dtype,
                                                          device=layer_weights.device)
-                    ind.models[layer_name] = layer_weights * mutate_level_masked_t
+                    new_state_dict[layer_name] = layer_weights * mutate_level_masked_t
+                ind.models[agent_id].load_state_dict(new_state_dict)
         return ind,
+
+    def save(self, file):
+        save_models_dict = {idx: model.state_dict() for idx, model in self.models.items()}
+        save_models_dict['num_states'] = self.num_states
+        save_models_dict['num_actions'] = self.num_actions
+        save_models_dict['num_agents'] = self.num_agents
+        torch.save(save_models_dict, file)
+
+    @staticmethod
+    def load(file):
+        load_models_dict = torch.load(file)
+        n_features = load_models_dict['num_states']
+        n_actions = load_models_dict['num_actions']
+        n_agents = load_models_dict['num_agents']
+        models = {}
+        for agent_id in range(n_agents):
+            real_model = agent_brain.AgentDQN(n_features, n_actions)
+            real_model.load_state_dict(load_models_dict[agent_id])
+            models[agent_id] = real_model
+        return AgentwiseFullyConnected(models, n_features, n_actions)
 
 
 class AgentwiseQTable(BaseInd, BaseGeneticInd, SelfSaving):

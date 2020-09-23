@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Type
 
 import numpy as np
+import torch
 from deap import algorithms, base, creator, tools
 from smac.env import StarCraft2Env
 
@@ -18,6 +19,7 @@ PRESET = 'dqn'
 
 random.seed(SEED)
 np.random.seed(SEED)
+torch.manual_seed(SEED)
 
 
 def main():
@@ -45,6 +47,7 @@ def main():
     algorithms.eaSimple(pop, toolbox, cxpb=0.7, mutpb=0.2, ngen=NUM_GENERATIONS,
                         stats=stats, halloffame=hof)
     save_top_individual(hof)
+    print(f'Num of evaluations (episodes): {evaluator.evaluation_counter}')
 
     if EVALUATE_TOP:
         print("results of evaluation of top individual")

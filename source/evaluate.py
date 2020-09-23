@@ -14,6 +14,7 @@ class BaseSCEvaluator(abc.ABC):
         self.n_actions = env_info["n_actions"]
         self.n_agents = env_info["n_agents"]
         self.epsilon = epsilon
+        self.evaluation_counter = 0
 
     @abc.abstractmethod
     def get_num_states(self) -> int:
@@ -36,6 +37,7 @@ class BaseSCEvaluator(abc.ABC):
         return agents_states, avail_actions_indices
 
     def evaluate(self, individual: individuals.BaseInd) -> Tuple[float]:
+        self.evaluation_counter += 1
         self.env.reset()
         terminated = False
         episode_reward = 0
