@@ -12,7 +12,7 @@ from source import evaluate, individuals
 
 SEED = 1337
 POPULATION = 10
-NUM_GENERATIONS = 10
+NUM_GENERATIONS = 20
 EVALUATE_TOP = True
 SC2_PATH = 'G:\Programs\StarCraft II'
 PRESET = 'dqn'
@@ -57,9 +57,9 @@ def main():
 
 
 def save_top_individual(hof):
-    top = hof.items[0]
+    top: individuals.BaseInd = hof.items[0]
     now = datetime.now().strftime("%Y_%m_%d__%H_%M_%S")
-    top.save(f'{now}---top_individual_q_table.npy')
+    top.save(f'../results/{now}__top_individual')
 
 
 def prepare_env(individual_class: Type[individuals.BaseGeneticInd], evaluator):

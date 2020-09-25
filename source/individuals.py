@@ -1,4 +1,5 @@
 import abc
+import pathlib
 from typing import Dict, Tuple
 
 import numpy as np
@@ -7,7 +8,18 @@ import torch
 from source import agent_brain
 
 
-class BaseInd(abc.ABC):
+class SelfSaving(abc.ABC):
+    @abc.abstractmethod
+    def save(self, file):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def load(file):
+        pass
+
+
+class BaseInd(SelfSaving):
     @abc.abstractmethod
     def get_actions(self, states: Dict[int, int],
                     avail_actions: Dict[int, np.array],
@@ -15,7 +27,7 @@ class BaseInd(abc.ABC):
         pass
 
 
-class BaseGeneticInd(abc.ABC):
+class BaseGeneticInd(BaseInd):
     @staticmethod
     @abc.abstractmethod
     def init_simple(ind_class, num_agents, num_states, num_actions) -> 'BaseGeneticInd':
@@ -33,18 +45,7 @@ class BaseGeneticInd(abc.ABC):
         pass
 
 
-class SelfSaving(abc.ABC):
-    @abc.abstractmethod
-    def save(self, file):
-        pass
-
-    @staticmethod
-    @abc.abstractmethod
-    def load(file):
-        pass
-
-
-class AgentwiseFullyConnected(BaseInd, BaseGeneticInd, SelfSaving):
+class AgentwiseFullyConnected(BaseGeneticInd):
     models: Dict[int, agent_brain.AgentDQN]
 
     def __init__(self, models: Dict[int, agent_brain.AgentDQN], num_states: int,
@@ -147,6 +148,8 @@ class AgentwiseFullyConnected(BaseInd, BaseGeneticInd, SelfSaving):
         return ind,
 
     def save(self, file):
+        file = pathlib.Path(file)
+        file = file.parent / (file.name + '___gen_fully_conn.pt')
         save_models_dict = {idx: model.state_dict() for idx, model in self.models.items()}
         save_models_dict['num_states'] = self.num_states
         save_models_dict['num_actions'] = self.num_actions
@@ -167,7 +170,7 @@ class AgentwiseFullyConnected(BaseInd, BaseGeneticInd, SelfSaving):
         return AgentwiseFullyConnected(models, n_features, n_actions)
 
 
-class AgentwiseQTable(BaseInd, BaseGeneticInd, SelfSaving):
+class AgentwiseQTable(BaseGeneticInd):
     def __init__(self, q_table: np.ndarray):
         self.num_agents = q_table.shape[0]
         self.num_states = q_table.shape[1]
@@ -228,6 +231,8 @@ class AgentwiseQTable(BaseInd, BaseGeneticInd, SelfSaving):
         return ind,
 
     def save(self, file):
+        file = pathlib.Path(file)
+        file = file.parent / (file.name + '___gen_q_table.npy')
         np.save(file, self.q_table)
 
     @staticmethod
