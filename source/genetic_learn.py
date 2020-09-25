@@ -23,7 +23,7 @@ torch.manual_seed(SEED)
 
 
 def main():
-    env = StarCraft2Env(map_name="2m2zFOX", seed=SEED,
+    env = StarCraft2Env(map_name="3z3m_drm", seed=SEED,
                         reward_only_positive=False, obs_timestep_number=True,
                         reward_scale_rate=200)
     if PRESET == 'q_table':
@@ -78,7 +78,7 @@ def prepare_env(individual_class: Type[individuals.BaseGeneticInd], evaluator):
     toolbox.register("mate", individual_class.mate)
     toolbox.register("mutate", individual_class.mutate, loc=1,
                      scale=0.05, indpb=0.05)
-    toolbox.register("select", tools.selTournament, tournsize=3)
+    toolbox.register("select", tools.selTournament, tournsize=6)
     return toolbox
 
 

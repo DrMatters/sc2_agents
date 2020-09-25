@@ -19,9 +19,10 @@ logging.basicConfig(
 
 # %%
 
-MODEL_NAME = 'basic_inp_avg_out_lr_e-5_episode_num_500_eps_fraq_0.5_batch_size_32_new_eps'
+
 SC2_PATH = 'G:\Programs\StarCraft II'
 RESULT_PATH_BASE = '../results/'
+MAP_NAME = "3z3m_drm"
 LOGGING_FREQ = 10  # episodes
 SEED = 228
 
@@ -29,10 +30,14 @@ LR = 1e-5
 BATCH_SIZE = 32
 DISCOUNT = 0.999
 TARGET_UPDATE = 10
-N_EPISODE = 1000
+N_EPISODE = 200
+EXPLORATION_FRAQ = .15
 MEMORY_SIZE = N_EPISODE * 2
 EPS_TIME_FRACTION = 0.5
 LEARN_FREQ = 1  # on steps
+MODEL_NAME = f'basic_inp_avg_out_lr_e-5_episode_num_{N_EPISODE}' \
+             f'_eps_fraq_{EPS_TIME_FRACTION}_batch_size_{BATCH_SIZE}' \
+             f'_{MAP_NAME}_new_eps'
 
 os.environ['SC2PATH'] = SC2_PATH
 random.seed(SEED)
@@ -160,12 +165,12 @@ def prepare_env_and_agents():
     tb_writer = tensorboardX.SummaryWriter(str(tb_path.resolve()))
 
     # calculate eps decay and num exploration from N_EPISODE
-    num_exploration_ep = int(N_EPISODE * .15)
+    num_exploration_ep = int(N_EPISODE * EXPLORATION_FRAQ)
     save_freq = min(20, N_EPISODE // 15)
     eps_decay_eps = N_EPISODE * EPS_TIME_FRACTION
 
     # prepare env
-    env = StarCraft2Env(map_name="2m2zFOX", seed=42, reward_only_positive=False,
+    env = StarCraft2Env(map_name=MAP_NAME, seed=SEED, reward_only_positive=False,
                         obs_timestep_number=True, reward_scale_rate=200)
     # prepare agents
     agents: List[Agent] = prepare_agents(env, eps_decay_eps, tb_writer)
