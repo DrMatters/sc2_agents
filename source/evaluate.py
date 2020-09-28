@@ -3,16 +3,19 @@ from typing import Tuple, Any
 
 import numpy as np
 import smac.env as sm_env
+import tensorboardX
 
 from source import individuals
 
 
 class BaseSCEvaluator(abc.ABC):
-    def __init__(self, environment: sm_env.StarCraft2Env, epsilon: float = 0.7):
+    def __init__(self, environment: sm_env.StarCraft2Env,
+                 tb_writer: tensorboardX.SummaryWriter = None, epsilon: float = 0.7):
         self.env = environment
         env_info = self.env.get_env_info()
         self.n_actions = env_info["n_actions"]
         self.n_agents = env_info["n_agents"]
+        self.writer = tb_writer
         self.epsilon = epsilon
         self.evaluation_counter = 0
 
@@ -37,8 +40,10 @@ class BaseSCEvaluator(abc.ABC):
         return agents_states, avail_actions_indices
 
     def evaluate(self, individual: individuals.BaseInd) -> Tuple[float]:
-        self.evaluation_counter += 1
         self.env.reset()
+        if self.writer and self.env.battles_game:
+            win_rate = self.env.get_stats()['win_rate']
+            self.writer.add_scalar('win_rate', win_rate, self.evaluation_counter)
         terminated = False
         episode_reward = 0
         while not terminated:
@@ -47,6 +52,7 @@ class BaseSCEvaluator(abc.ABC):
 
             reward, terminated, _ = self.env.step(actions)
             episode_reward += reward
+        self.evaluation_counter += 1
         return episode_reward,
 
     def evaluate_single(self, individual, n=10):

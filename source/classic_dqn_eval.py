@@ -11,6 +11,9 @@ from smac.env import StarCraft2Env
 from source import evaluate
 from source import individuals
 
+random.seed(42)
+np.random.seed(42)
+
 SEED = 228
 # NUM_AGENTS = 2
 logging.basicConfig(
@@ -29,17 +32,15 @@ parser.add_argument('-N', '--number_of_agents', default=2, type=int)
 
 def main():
     args = parser.parse_args()
-    env = StarCraft2Env(map_name="2m2zFOX", seed=SEED, reward_only_positive=False,
+    env = StarCraft2Env(map_name="15z3m_drm", seed=SEED, reward_only_positive=False,
                         obs_timestep_number=True, reward_scale_rate=200,
                         realtime=False)
     evaluator = evaluate.SCNativeEvaluator(env)
 
     top_individual = read_last_individual(args, evaluator)
 
-    random.seed(42)
-    np.random.seed(42)
-
-    evaluator.evaluate_single(top_individual, 1)
+    with torch.no_grad():
+        evaluator.evaluate_single(top_individual, 50)
     return 0
 
 
@@ -62,7 +63,7 @@ def read_last_individual(args, evaluator: evaluate.BaseSCEvaluator):
     for agent_id in range(n_agents):
         agent_fname = stored_model_name_mask.replace('#', str(agent_id))
         agent_model = torch.load(models_path / agent_fname)
-        agents_models[agent_id] = agent_model
+        agents_models[agent_id] = agent_model.eval()
     top_individual = individuals.AgentwiseFullyConnected(agents_models,
                                                          num_states,
                                                          num_actions)

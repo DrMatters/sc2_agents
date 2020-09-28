@@ -1,5 +1,6 @@
 import abc
 import pathlib
+import random
 from typing import Dict, Tuple
 
 import numpy as np
@@ -91,7 +92,30 @@ class AgentwiseFullyConnected(BaseGeneticInd):
     @staticmethod
     def mate(left: 'AgentwiseFullyConnected', right: 'AgentwiseFullyConnected') \
             -> Tuple['BaseGeneticInd', 'BaseGeneticInd']:
-        return AgentwiseFullyConnected.mate_shuffle(left, right)
+        return AgentwiseFullyConnected.mate_shuffle_agents(left, right)
+
+    @staticmethod
+    def mate_shuffle_agents(left: 'AgentwiseFullyConnected', right: 'AgentwiseFullyConnected') \
+            -> Tuple['BaseGeneticInd', 'BaseGeneticInd']:
+        # # array of [1, 0] with the shape of q table of a single agent
+        l_models = AgentwiseFullyConnected._mate_shuffle_agents_single(left, right)
+        r_models = AgentwiseFullyConnected._mate_shuffle_agents_single(left, right)
+        left.models = l_models
+        right.models = r_models
+        return left, right
+
+    @staticmethod
+    def _mate_shuffle_agents_single(left, right):
+        with torch.no_grad():
+            models = {}
+            for agent_id in range(left.num_agents):
+                child_model = agent_brain.AgentDQN(left.num_states, left.num_actions)
+                agent_from_left = random.random() < 0.5
+                # print(f'agent_from_left {agent_from_left}, agent_id {agent_id}')
+                agent_parent = left if agent_from_left else right
+                child_model.load_state_dict(agent_parent.models[agent_id].state_dict())
+                models[agent_id] = child_model
+        return models
 
     @staticmethod
     def mate_shuffle(left: 'AgentwiseFullyConnected', right: 'AgentwiseFullyConnected') \
