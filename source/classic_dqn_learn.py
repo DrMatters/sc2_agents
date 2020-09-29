@@ -37,7 +37,7 @@ EPS_TIME_FRACTION = 0.5
 LEARN_FREQ = 1  # on steps
 MODEL_NAME = f'basic_inp_avg_out_lr_e-5_episode_num_{N_EPISODE}' \
              f'_eps_fraq_{EPS_TIME_FRACTION}_batch_size_{BATCH_SIZE}' \
-             f'_{MAP_NAME}_new_eps'
+             f'_{MAP_NAME}'
 
 os.environ['SC2PATH'] = SC2_PATH
 random.seed(SEED)
@@ -59,6 +59,9 @@ def main():
         # if episode % LOGGING_FREQ == 0:
         #     logging.info(f'Episode {episode} has started')
         env.reset()
+        if tb_writer and env.battles_game:
+            win_rate = env.get_stats()['win_rate']
+            tb_writer.add_scalar('win_rate', win_rate, episode)
 
         # reset data
         episode_reward = 0
@@ -140,8 +143,8 @@ def main():
             logging.info("Exploration finished!")
 
         # report to tensorboard
-        report_tensorboard(episode, agents_episode_reward,
-                           episode_reward, n_agents, tb_writer)
+        # report_tensorboard(episode, agents_episode_reward,
+        #                    episode_reward, n_agents, tb_writer)
 
         # print logging info
         if episode % LOGGING_FREQ == LOGGING_FREQ - 1:
@@ -151,6 +154,7 @@ def main():
         if save_path_base and episode % save_freq == save_freq - 1:
             save_models(agents, episode, save_path_base, start_training)
     save_models(agents, 'final', save_path_base, start_training)
+    tb_writer.close()
 
 
 def prepare_env_and_agents():
@@ -173,7 +177,7 @@ def prepare_env_and_agents():
     env = StarCraft2Env(map_name=MAP_NAME, seed=SEED, reward_only_positive=False,
                         obs_timestep_number=True, reward_scale_rate=200)
     # prepare agents
-    agents: List[Agent] = prepare_agents(env, eps_decay_eps, tb_writer)
+    agents: List[Agent] = prepare_agents(env, eps_decay_eps, )  # tb_writer)
     return save_freq, agents, env, num_exploration_ep, save_path_base, tb_writer
 
 
@@ -222,7 +226,7 @@ def save_models(agents: List[Agent], episode, save_path_base, start_training):
         torch.save(agents[agent_id].policy_model, model_path)
 
 
-def prepare_agents(env: StarCraft2Env, eps_decay_steps, tb_writer):
+def prepare_agents(env: StarCraft2Env, eps_decay_steps, tb_writer=None):
     env_info = env.get_env_info()
     n_agents = env_info['n_agents']
     agents: List[Agent] = []
