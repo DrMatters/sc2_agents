@@ -6,20 +6,19 @@ import gym
 import numpy as np
 from tqdm import tqdm
 
-
 # debug parameters
 ENABLE_SLEEP = True
 ENABLE_PRINTING = False
 RANDOM_SEED = 228
 
 # constant parameters
-TOTAL_EPISODES = 20_000
+TOTAL_EPISODES = 70_000
 MAX_STEPS = 100
 EPSILON_DECAY_RATE = 1 / TOTAL_EPISODES
 MIN_EPSILON = 0.001
 
 # rl params
-GAMMA = 0.9
+GAMMA = 0.7
 LR_RATE = 0.19
 INIT_EPS = 1
 
@@ -27,25 +26,32 @@ random.seed(RANDOM_SEED)
 np.random.seed(RANDOM_SEED)
 
 
-def epsilon_greedy(state, epsilon, Q, env):
+def epsilon_greedy(state, epsilon, Q_table, env):
     if np.random.uniform(0, 1) < epsilon:
         action = env.action_space.sample()
     else:
-        action = np.argmax(Q[state, :])
+        action = np.argmax(Q_table[state, :])
     return action
 
 
-def update_q_table(initial_state, result_state, reward, action, Q):
+def update_q_table(initial_state, result_state, reward, action, Q_table):
     # same as formula for Q-learning
     # Q_new[s, a] <- Q_old[s, a] + alpha * (r + gamma * max_a(Q_old[s_new, a]) - Q_old[s, a])
 
-    Q[initial_state, action] = Q[initial_state, action] + LR_RATE * \
-                               (reward + GAMMA * np.max(Q[result_state, :]) - Q[initial_state, action])
+    Q_table[initial_state, action] = Q_table[initial_state, action] + LR_RATE * \
+                                     (reward + GAMMA * np.max(Q_table[result_state, :]) - Q_table[initial_state, action])
+
+
+def ravel_env_state(env_state, observation_space):
+    obs = np.zeros([res.n for res in observation_space.spaces])
+    obs[env_state[0], env_state[1], int(env_state[2])] = 1
+    obs = np.argwhere(obs.ravel()).item()
+    return obs
 
 
 def main():
     # loading Frozen Lake environment from gym
-    env = gym.make('FrozenLake-v0')
+    env = gym.make('Blackjack-v0')
     env.seed(RANDOM_SEED)
     env.action_space.seed(RANDOM_SEED)
 
@@ -54,10 +60,16 @@ def main():
     epsilon = INIT_EPS
 
     # Q-table initialization
-    Q = np.zeros((env.observation_space.n, env.action_space.n))
+    observation_space_size = 1
+    for space in env.observation_space.spaces:
+        observation_space_size *= space.n
+
+    Q_table = np.zeros((observation_space_size, env.action_space.n))
+
     # Start
     for _ in tqdm(range(TOTAL_EPISODES)):
-        state = env.reset()
+        env_state = env.reset()
+        state = ravel_env_state(env_state, env.observation_space)
         step = 0
 
         # decreasing epsilon
@@ -68,8 +80,9 @@ def main():
 
         # loop within episode
         while step < MAX_STEPS:
-            action = epsilon_greedy(state, epsilon, Q, env)
+            action = epsilon_greedy(state, epsilon, Q_table, env)
             new_state, reward, done, info = env.step(action)
+            new_state = ravel_env_state(new_state, env.observation_space)
 
             # debug to see what's happening ("Ctrl + /" - uncomment highlighted code)
 
@@ -85,7 +98,7 @@ def main():
                 reward = -1  # step on ice
 
             # doing the learning
-            update_q_table(state, new_state, reward, action, Q)
+            update_q_table(state, new_state, reward, action, Q_table)
             state = new_state
             step += 1
 
@@ -96,7 +109,7 @@ def main():
 
     # save Q-table in file on drive (same directory)
     with open("frozenLake_qTable.pkl", 'wb') as f:
-        pickle.dump(Q, f)
+        pickle.dump(Q_table, f)
 
     #################
     # PLAYING STAGE #
@@ -108,19 +121,21 @@ def main():
 
     # load q-table from file
     with open("frozenLake_qTable.pkl", 'rb') as f:
-        Q = pickle.load(f)
+        Q_table = pickle.load(f)
 
     win = 0
     defeat = 0
 
     # Evaluation
     for _ in tqdm(range(1000)):
-        state = env.reset()
+        env_state = env.reset()
+        state = ravel_env_state(env_state, env.observation_space)
         step = 0
 
         while step < MAX_STEPS:
-            action = np.argmax(Q[state, :])
+            action = np.argmax(Q_table[state, :])
             new_state, reward, done, info = env.step(action)
+            new_state = ravel_env_state(new_state, env.observation_space)
 
             # Windows CLI visualization
             if ENABLE_PRINTING:
