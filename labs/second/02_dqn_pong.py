@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-from .lib import wrappers
-from .lib import dqn_model
+# from lib import wrappers
+from labs.lib import wrappers
+from labs.lib import dqn_model
 
 import argparse
 import time
@@ -90,7 +91,7 @@ def calc_loss(batch, net, tgt_net, device="cpu"):
 
     states_v = torch.tensor(states).to(device)
     next_states_v = torch.tensor(next_states).to(device)
-    actions_v = torch.tensor(actions).to(device)
+    actions_v = torch.tensor(actions).to(device).long()
     rewards_v = torch.tensor(rewards).to(device)
     done_mask = torch.ByteTensor(dones).to(device)
 

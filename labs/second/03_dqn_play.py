@@ -6,8 +6,8 @@ import numpy as np
 
 import torch
 
-from lib import wrappers
-from lib import dqn_model
+from labs.lib import wrappers
+from labs.lib import dqn_model
 
 import collections
 
