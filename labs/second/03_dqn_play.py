@@ -11,7 +11,7 @@ from labs.lib import dqn_model
 
 import collections
 
-DEFAULT_ENV_NAME = "PongNoFrameskip-v4"
+DEFAULT_ENV_NAME = "Qbert-v0"
 FPS = 25
 
 

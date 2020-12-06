@@ -16,7 +16,7 @@ class RandomActionWrapper(gym.ActionWrapper):
 
 
 if __name__ == "__main__":
-    env = RandomActionWrapper(gym.make("CartPole-v0"))
+    env = gym.wrappers.Monitor(RandomActionWrapper(gym.make("Qbert-v0")), './runs/random/')
 
     obs = env.reset()
     total_reward = 0.0
