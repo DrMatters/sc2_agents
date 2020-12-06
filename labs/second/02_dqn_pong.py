@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # from lib import wrappers
-from labs.lib import wrappers
-from labs.lib import dqn_model
+from labs.second.lib import wrappers, dqn_model
 
 import argparse
 import time
