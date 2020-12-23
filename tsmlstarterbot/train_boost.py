@@ -45,7 +45,7 @@ def fetch_data_dir(directory, limit):
 
 def main():
     parser = argparse.ArgumentParser(description="Halite II training")
-    parser.add_argument("--model_name", help="Name of the model")
+    parser.add_argument("--model_name", help="Name of the model", default='xgb_model')
     parser.add_argument("--data", help="Data directory or zip file containing uncompressed games")
     parser.add_argument("--games_limit", type=int, help="Train on up to games_limit games")
     parser.add_argument("--seed", type=int, help="Random seed to make the training deterministic", default=53)
