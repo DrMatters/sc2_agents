@@ -117,7 +117,7 @@ def serialize_data(data, dump_features_location):
     training_data_to_store.to_hdf(dump_features_location, "training_data")
 
 
-def parse(all_games_json_data, bot_to_imitate=None, dump_features_location=None, games_num_players=None):
+def parse(all_games_json_data, bot_to_imitate=None, dump_features_location=None, only_one_on_one=False):
     """
     Parse the games to compute features. This method computes PER_PLANET_FEATURES features for each planet in each frame
     in each game the bot we're imitating played.
@@ -130,7 +130,6 @@ def parse(all_games_json_data, bot_to_imitate=None, dump_features_location=None,
     print("Parsing data...")
 
     parsed_games = 0
-    skipped_n_players_games = 0
 
     training_data = []
 
@@ -148,11 +147,6 @@ def parse(all_games_json_data, bot_to_imitate=None, dump_features_location=None,
     print("Bot to imitate: {}.".format(bot_to_imitate))
 
     for json_data in all_games_json_data:
-
-        if games_num_players:
-            if json_data['num_players'] != games_num_players:
-                skipped_n_players_games += 1
-                continue
 
         frames = json_data['frames']
         moves = json_data['moves']
@@ -274,7 +268,7 @@ def parse(all_games_json_data, bot_to_imitate=None, dump_features_location=None,
 
     flat_training_data = [item for sublist in training_data for item in sublist]
 
-    print(f"Data parsed, parsed {parsed_games} games, skipped {skipped_n_players_games} by n_players,"
+    print(f"Data parsed, parsed {parsed_games} games, skipped none by n_players,"
           f" total frames: {len(flat_training_data)}")
 
     return format_data_for_training(flat_training_data)

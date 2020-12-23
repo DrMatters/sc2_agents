@@ -1,3 +1,10 @@
+import sys
+import warnings
+
+if not sys.warnoptions:
+    warnings.simplefilter("ignore")
+# disable warnings
+
 import heapq
 import numpy as np
 import os

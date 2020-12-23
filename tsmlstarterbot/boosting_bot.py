@@ -6,7 +6,7 @@ import time
 import xgboost
 
 import hlt
-from tsmlstarterbot.common import *
+from tsmlstarterbot import common
 
 class BoostingBot:
     def __init__(self, location, name):
@@ -17,13 +17,14 @@ class BoostingBot:
             self._xgb_classifier: xgboost.XGBClassifier = pickle.load(f)
 
         # Run prediction on random data to make sure that code path is executed at least once before the game starts
-        random_input_data = np.random.rand(PLANET_MAX_NUM, PER_PLANET_FEATURES).reshape((1, -1))
-        predictions = self._xgb_classifier.predict(random_input_data)
-        assert len(predictions) == PLANET_MAX_NUM
+        random_input_data = np.random.rand(common.PLANET_MAX_NUM, common.PER_PLANET_FEATURES).reshape((1, -1))
+        predictions = self._xgb_classifier.predict_proba(random_input_data).squeeze(0)
+        assert len(predictions) == common.PLANET_MAX_NUM
 
     def predict_xgb(self, features):
         reshaped = features.reshape((1, -1))
-        return self._xgb_classifier.predict(reshaped)
+        prediction = self._xgb_classifier.predict_proba(reshaped)
+        return np.squeeze(prediction, 0)
 
     def play(self):
         """
@@ -39,7 +40,7 @@ class BoostingBot:
             start_time = time.time()
 
             # Produce features for each planet.
-            features = np.ndarray(self.produce_features(game_map))
+            features = np.array(self.produce_features(game_map)).reshape((1, -1))
 
             # Find predictions which planets we should send ships to.
             predictions = self.predict_xgb(features)
@@ -61,7 +62,7 @@ class BoostingBot:
         :param game_map: game map
         :return: 2-D array where i-th row represents set of features of the i-th planet
         """
-        feature_matrix = [[0 for _ in range(PER_PLANET_FEATURES)] for _ in range(PLANET_MAX_NUM)]
+        feature_matrix = [[0 for _ in range(common.PER_PLANET_FEATURES)] for _ in range(common.PLANET_MAX_NUM)]
 
         for planet in game_map.all_planets():
 
@@ -93,7 +94,7 @@ class BoostingBot:
                         enemy_best_distance = min(enemy_best_distance, d)
                         gravity -= ship.health / (d * d)
 
-            distance_from_center = distance(planet.x, planet.y, game_map.width / 2, game_map.height / 2)
+            distance_from_center = common.distance(planet.x, planet.y, game_map.width / 2, game_map.height / 2)
 
             health_weighted_ship_distance = health_weighted_ship_distance / sum_of_health
 
@@ -139,7 +140,8 @@ class BoostingBot:
             return []
 
         planet_heap = []
-        ship_heaps = [[] for _ in range(PLANET_MAX_NUM)]
+        ship_heaps = [[] for _ in range(common.PLANET_MAX_NUM)]
+        ship_heaps = [[] for _ in range(common.PLANET_MAX_NUM)]
 
         # Create heaps for greedy ship assignment.
         for planet in game_map.all_planets():
