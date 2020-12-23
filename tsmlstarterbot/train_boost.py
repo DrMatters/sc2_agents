@@ -3,6 +3,7 @@ import json
 import os.path
 import pickle
 import random
+import zipfile
 
 import numpy as np
 import xgboost
@@ -43,6 +44,24 @@ def fetch_data_dir(directory, limit):
     return all_data
 
 
+def fetch_data_zip(zipfilename, limit):
+    """
+    Loads up to limit games into Python dictionaries from a zipfile containing uncompressed replay files.
+    """
+    all_jsons = []
+    with zipfile.ZipFile(zipfilename) as z:
+        print("Found {} games.".format(len(z.filelist)))
+        print("Trying to load up to {} games ...".format(limit))
+        for i in z.filelist[:limit]:
+            with z.open(i) as f:
+                lines = f.readlines()
+                assert len(lines) == 1
+                d = json.loads(lines[0].decode())
+                all_jsons.append(d)
+    print("{} games loaded.".format(len(all_jsons)))
+    return all_jsons
+
+
 def main():
     parser = argparse.ArgumentParser(description="Halite II training")
     parser.add_argument("--model_name", help="Name of the model", default='xgb_model')
@@ -67,7 +86,10 @@ def main():
         path_data_output = base_cache_path + '_output' + ext
 
     if not args.cache_train_data or not os.path.exists(path_data_input):
-        raw_data = fetch_data_dir(args.data, args.games_limit)
+        if args.data.endswith('.zip'):
+            raw_data = fetch_data_zip(args.data, args.games_limit)
+        else:
+            raw_data = fetch_data_dir(args.data, args.games_limit)
         # if no cache path or file not exists then calculate train data
         data_input, data_output = parse(raw_data, args.bot_to_imitate)
         if args.cache_train_data:
