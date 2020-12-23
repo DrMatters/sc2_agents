@@ -8,7 +8,7 @@ import xgboost
 import hlt
 from tsmlstarterbot.common import *
 
-class Bot:
+class BoostingBot:
     def __init__(self, location, name):
         current_directory = os.path.dirname(os.path.abspath(__file__))
         model_location = os.path.join(current_directory, os.path.pardir, "models", location)
