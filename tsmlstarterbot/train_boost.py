@@ -1,12 +1,13 @@
-import matplotlib
-matplotlib.use('Agg')
 import argparse
 import json
 import os.path
-import zipfile
+import pickle
+import random
 
 import numpy as np
-import pandas as pd
+import xgboost
+from sklearn import model_selection
+
 from tsmlstarterbot.parsing import parse
 
 
@@ -41,32 +42,14 @@ def fetch_data_dir(directory, limit):
 
     return all_data
 
-def fetch_data_zip(zipfilename, limit):
-    """
-    Loads up to limit games into Python dictionaries from a zipfile containing uncompressed replay files.
-    """
-    all_jsons = []
-    with zipfile.ZipFile(zipfilename) as z:
-        print("Found {} games.".format(len(z.filelist)))
-        print("Trying to load up to {} games ...".format(limit))
-        for i in z.filelist[:limit]:
-            with z.open(i) as f:
-                lines = f.readlines()
-                assert len(lines) == 1
-                d = json.loads(lines[0].decode())
-                all_jsons.append(d)
-    print("{} games loaded.".format(len(all_jsons)))
-    return all_jsons
-
 
 def main():
     parser = argparse.ArgumentParser(description="Halite II training")
     parser.add_argument("--model_name", help="Name of the model")
     parser.add_argument("--data", help="Data directory or zip file containing uncompressed games")
-    parser.add_argument("--games_limit", type=int, help="Train on up to games_limit games", default=15)
-    parser.add_argument("--seed", type=int, help="Random seed to make the training deterministic")
+    parser.add_argument("--games_limit", type=int, help="Train on up to games_limit games")
+    parser.add_argument("--seed", type=int, help="Random seed to make the training deterministic", default=53)
     parser.add_argument("--bot_to_imitate", help="Name of the bot whose strategy we want to learn")
-    parser.add_argument("--dump_features_location", help="Location of hdf file where the features should be stored")
     parser.add_argument("--cache_train_data", help="Location of where to store/read cache data")
     parser.add_argument('--only_cache_data', action='store_true')
 
@@ -75,6 +58,7 @@ def main():
     # Make deterministic if needed
     if args.seed is not None:
         np.random.seed(args.seed)
+        random.seed(args.seed)
 
     if args.cache_train_data:
         base_cache_path = os.path.splitext(args.cache_train_data)[0]
@@ -83,10 +67,7 @@ def main():
         path_data_output = base_cache_path + '_output' + ext
 
     if not args.cache_train_data or not os.path.exists(path_data_input):
-        if args.data.endswith('.zip'):
-            raw_data = fetch_data_zip(args.data, args.games_limit)
-        else:
-            raw_data = fetch_data_dir(args.data, args.games_limit)
+        raw_data = fetch_data_dir(args.data, args.games_limit)
         # if no cache path or file not exists then calculate train data
         data_input, data_output = parse(raw_data, args.bot_to_imitate)
         if args.cache_train_data:
@@ -101,16 +82,29 @@ def main():
     if args.only_cache_data:
         return
 
-    data_size = len(data_input)
-    training_input, training_output = data_input[:int(0.85 * data_size)], data_output[:int(0.85 * data_size)]
-    validation_input, validation_output = data_input[int(0.85 * data_size):], data_output[int(0.85 * data_size):]
+    data_input_p = np.reshape(data_input, (data_input.shape[0], -1))
+    data_output_p = np.argmax(data_output, axis=1)
 
+    X_train, X_test, y_train, y_test = \
+        model_selection.train_test_split(data_input_p, data_output_p, train_size=0.85, random_state=args.seed,
+                                         shuffle=True)
+
+    classifier = xgboost.XGBRegressor(objective='multi:softprob', n_jobs=-1, random_state=args.seed, )
+    classifier.set_params(**{'num_class': data_output.shape[1]})
+    fit_res = classifier.fit(
+        X_train, y_train,
+        eval_set=[(X_train, y_train), (X_test, y_test)],
+        eval_metric='mlogloss'
+    )
 
     # Save the trained model, so it can be used by the bot
     current_directory = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(current_directory, os.path.pardir, "models", args.model_name + ".ckpt")
+    model_path = os.path.join(current_directory, os.path.pardir, "models", args.model_name + ".pickle")
     print("Training finished, serializing model to {}".format(model_path))
+    with open(model_path, 'wb') as f:
+        pickle.dump(classifier, f)
     print("Model serialized")
+
 
 if __name__ == "__main__":
     main()
